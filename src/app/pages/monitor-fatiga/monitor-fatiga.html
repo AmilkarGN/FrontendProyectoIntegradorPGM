@@ -1,0 +1,139 @@
+<div class="monitor-container fade-in">
+
+  <!-- HEADER -->
+  <div class="monitor-header">
+    <div class="header-left">
+      <span class="material-symbols-rounded header-icon">visibility</span>
+      <div>
+        <h2>Monitor Biométrico de Fatiga</h2>
+        <p class="header-sub">Análisis en tiempo real · IA Dual (Identidad + Fatiga)</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="badge-estado" [ngClass]="claseEstado()">
+        <span class="dot-pulse"></span>
+        {{ estado?.estado_alerta || 'INACTIVO' }}
+      </div>
+      <button class="btn-detener" (click)="iniciar()" *ngIf="!activo" style="background:#22c55e;">
+        <span class="material-symbols-rounded">play_circle</span> Iniciar
+      </button>
+      <button class="btn-detener" (click)="detener()" *ngIf="activo">
+        <span class="material-symbols-rounded">stop_circle</span> Detener
+      </button>
+      <div style="width: 1px; height: 30px; background: #e2e8f0; margin: 0 5px;"></div>
+      <button class="btn-detener" (click)="toggleMalla()" [ngStyle]="{'background': modoMalla ? '#6366f1' : '#94a3b8'}" title="Activar/Desactivar Malla">
+        <span class="material-symbols-rounded">grid_on</span>
+      </button>
+      <button class="btn-detener" (click)="togglePuntos()" [ngStyle]="{'background': modoPuntos ? '#6366f1' : '#94a3b8'}" title="Activar/Desactivar Puntos">
+        <span class="material-symbols-rounded">grain</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="monitor-grid">
+
+    <!-- STREAM DE CÁMARA -->
+    <div class="camera-panel">
+      <div class="camera-frame" [ngClass]="{'border-alerta': esAlerta(), 'border-ok': !esAlerta()}">
+        <img [src]="streamUrlCache" alt="Monitor de cámara" class="camera-feed"
+             (error)="onStreamError()" (load)="onStreamLoad()" *ngIf="streamUrlCache">
+        <div class="camera-overlay-badge" *ngIf="activo">
+          <span class="material-symbols-rounded">videocam</span>
+          {{ estado?.fps || 0 }} FPS
+        </div>
+      </div>
+      <p class="camera-hint">
+        <span class="material-symbols-rounded" style="font-size:14px">info</span>
+        El stream se activa al cargar la página. Asegúrese que la cámara no esté en uso por otra aplicación.
+      </p>
+    </div>
+
+    <!-- PANEL DE MÉTRICAS -->
+    <div class="metrics-panel">
+
+      <!-- Tarjeta de identidad -->
+      <div class="metric-card identity-card">
+        <div class="metric-icon">
+          <span class="material-symbols-rounded">badge</span>
+        </div>
+        <div class="metric-info">
+          <span class="metric-label">Conductor Detectado</span>
+          <span class="metric-value identity-name"
+                [ngClass]="{'name-ok': estado?.nombre !== 'Desconocido', 'name-danger': estado?.nombre === 'Desconocido'}">
+            {{ estado?.nombre || '—' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- EAR -->
+      <div class="metric-card" [ngClass]="{'card-danger': (estado?.ear || 0) < 0.22}">
+        <div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div>
+        <div class="metric-info">
+          <span class="metric-label">EAR — Apertura de Ojos</span>
+          <span class="metric-value">{{ (estado?.ear || 0) | number:'1.3-3' }}</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-fill"
+                 [style.width.%]="((estado?.ear || 0) / 0.4) * 100"
+                 [ngClass]="progressClass((estado?.ear || 0) / 0.4)"></div>
+          </div>
+          <span class="metric-hint">Umbral mínimo: 0.220</span>
+        </div>
+      </div>
+
+      <!-- PERCLOS -->
+      <div class="metric-card" [ngClass]="{'card-danger': (estado?.perclos || 0) > 0.30}">
+        <div class="metric-icon"><span class="material-symbols-rounded">avg_pace</span></div>
+        <div class="metric-info">
+          <span class="metric-label">PERCLOS — Cierre Acumulado</span>
+          <span class="metric-value">{{ ((estado?.perclos || 0) * 100) | number:'1.1-1' }}%</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-fill"
+                 [style.width.%]="(estado?.perclos || 0) * 100"
+                 [ngClass]="progressClass(estado?.perclos || 0)"></div>
+          </div>
+          <span class="metric-hint">Alerta si supera el 30%</span>
+        </div>
+      </div>
+
+      <!-- MAR -->
+      <div class="metric-card" [ngClass]="{'card-warning': (estado?.mar || 0) > 0.60}">
+        <div class="metric-icon"><span class="material-symbols-rounded">sentiment_very_dissatisfied</span></div>
+        <div class="metric-info">
+          <span class="metric-label">MAR — Apertura de Boca</span>
+          <span class="metric-value">{{ (estado?.mar || 0) | number:'1.3-3' }}</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-fill"
+                 [style.width.%]="((estado?.mar || 0) / 1.2) * 100"
+                 [ngClass]="progressClass((estado?.mar || 0) / 1.2)"></div>
+          </div>
+          <span class="metric-hint">Bostezo detectado si supera 0.600</span>
+        </div>
+      </div>
+
+      <!-- Parpadeos y pose -->
+      <div class="metric-row">
+        <div class="metric-card mini-card">
+          <span class="material-symbols-rounded mini-icon">av_timer</span>
+          <span class="mini-label">Parpadeos totales</span>
+          <span class="mini-value">{{ estado?.blink_total || 0 }}</span>
+        </div>
+        <div class="metric-card mini-card" [ngClass]="{'card-warning': (estado?.angulo || 0) > 15}">
+          <span class="material-symbols-rounded mini-icon">rotate_90_degrees_ccw</span>
+          <span class="mini-label">Inclinación cabeza</span>
+          <span class="mini-value">{{ (estado?.angulo || 0) | number:'1.1-1' }}°</span>
+        </div>
+      </div>
+
+      <!-- Leyenda de alertas -->
+      <div class="alert-legend">
+        <p class="legend-title">Estados del sistema</p>
+        <div class="legend-item"><span class="dot green"></span> DESPIERTO — Normal</div>
+        <div class="legend-item"><span class="dot orange"></span> BOSTEZO / CABEZA INCLINADA — Atención</div>
+        <div class="legend-item"><span class="dot red"></span> MICROSUEÑO / FATIGA — Crítico</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
