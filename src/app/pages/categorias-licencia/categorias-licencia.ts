@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConductorService, CategoriaLicencia } from '../../services/conductor';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-categorias-licencia',
@@ -43,34 +44,54 @@ export class CategoriasLicenciaComponent implements OnInit {
   guardarCategoria(): void {
     if (this.categoriaActual.id && this.categoriaActual.id > 0) {
       this.conductorService.actualizarCategoria(this.categoriaActual.id, this.categoriaActual).subscribe({
-        next: () => { this.cargarCategorias(); this.cerrarModal(); },
-        error: () => alert('Error al actualizar la categoría.')
+        next: () => { 
+          this.cargarCategorias(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Categoría actualizada correctamente', 'success');
+        },
+        error: () => Swal.fire('Error', 'Error al actualizar la categoría.', 'error')
       });
     } else {
       this.conductorService.crearCategoria(this.categoriaActual).subscribe({
-        next: () => { this.cargarCategorias(); this.cerrarModal(); },
-        error: () => alert('Error al crear la categoría.')
+        next: () => { 
+          this.cargarCategorias(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Categoría creada correctamente', 'success');
+        },
+        error: () => Swal.fire('Error', 'Error al crear la categoría.', 'error')
       });
     }
   }
 
-// 1. Definimos las categorías que son "intocables" (Protección de sistema)
-readonly CATEGORIAS_PROTEGIDAS = ['P', 'A', 'B', 'C', 'M', 'T', 'Provisional'];
+  readonly CATEGORIAS_PROTEGIDAS = ['P', 'A', 'B', 'C', 'M', 'T', 'Provisional'];
 
-// 2. Modificamos la función de eliminar para que bloquee estas categorías
-eliminarCategoria(id: number): void {
-  const cat = this.categorias.find(c => c.id === id);
-  
-  if (cat && this.CATEGORIAS_PROTEGIDAS.includes(cat.nombre)) {
-    alert(`⛔ Error de Seguridad: La '${cat.nombre}' es una categoría base de la normativa nacional y no puede ser eliminada.`);
-    return;
-  }
+  eliminarCategoria(id: number): void {
+    const cat = this.categorias.find(c => c.id === id);
+    
+    if (cat && this.CATEGORIAS_PROTEGIDAS.includes(cat.nombre)) {
+      Swal.fire('Seguridad del Sistema', `La categoría '${cat.nombre}' es una categoría base de la normativa nacional y no puede ser eliminada.`, 'error');
+      return;
+    }
 
-  if (confirm('¿Está seguro de eliminar esta categoría personalizada?')) {
-    this.conductorService.eliminarCategoria(id).subscribe({
-      next: () => this.categorias = this.categorias.filter(c => c.id !== id),
-      error: () => alert('No se puede eliminar. Hay conductores asignados.')
+    Swal.fire({
+      title: '¿Eliminar Categoría?',
+      text: '¿Está seguro de eliminar esta categoría personalizada?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.conductorService.eliminarCategoria(id).subscribe({
+          next: () => {
+            this.categorias = this.categorias.filter(c => c.id !== id);
+            Swal.fire('¡Eliminada!', 'La categoría fue eliminada.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se puede eliminar. Hay conductores asignados.', 'error')
+        });
+      }
     });
   }
-}
 }

@@ -5,6 +5,7 @@ import {
   VehiculoService, Vehiculo, ModeloVehiculo, 
   TipoVehiculo, EstadoVehiculo 
 } from '../../services/vehiculo';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-vehiculos',
@@ -98,24 +99,46 @@ export class VehiculosComponent implements OnInit {
 
     if (this.modoModal === 'editar') {
       this.vehiculoService.actualizarVehiculo(this.placaOriginalEdicion, formData).subscribe({
-        next: () => { this.cargarVehiculos(); this.cerrarModal(); },
-        error: () => alert('Error al actualizar. Revisa la consola.')
+        next: () => { 
+          this.cargarVehiculos(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Vehículo actualizado correctamente', 'success');
+        },
+        error: () => Swal.fire('Error', 'Error al actualizar. Revisa la consola o asegúrate de que la placa sea válida.', 'error')
       });
     } else {
       this.vehiculoService.crearVehiculo(formData).subscribe({
-        next: () => { this.cargarVehiculos(); this.cerrarModal(); },
-        error: () => alert('Error al crear. Asegúrate de que la placa no exista ya.')
+        next: () => { 
+          this.cargarVehiculos(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Vehículo registrado correctamente', 'success');
+        },
+        error: () => Swal.fire('Error', 'Error al crear. Asegúrate de que la placa no exista ya.', 'error')
       });
     }
   }
 
   eliminarVehiculo(placa: string): void {
-    if (confirm(`¿Estás seguro de eliminar el vehículo con placa ${placa}?`)) {
-      this.vehiculoService.eliminarVehiculo(placa).subscribe({
-        next: () => this.vehiculos = this.vehiculos.filter(v => v.placa !== placa),
-        error: () => alert('No se puede eliminar. Probablemente tiene asignaciones activas.')
-      });
-    }
+    Swal.fire({
+      title: '¿Eliminar Vehículo?',
+      text: `¿Estás seguro de eliminar el vehículo con placa ${placa}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.vehiculoService.eliminarVehiculo(placa).subscribe({
+          next: () => {
+            this.vehiculos = this.vehiculos.filter(v => v.placa !== placa);
+            Swal.fire('Eliminado', 'El vehículo fue eliminado exitosamente.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se puede eliminar. Probablemente tiene asignaciones activas.', 'error')
+        });
+      }
+    });
   }
 
   obtenerImagenUrl(url: string | undefined): string {

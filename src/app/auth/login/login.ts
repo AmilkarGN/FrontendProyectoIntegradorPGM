@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router'; // IMPORTANTE EL RouterLin
 import { AuthService } from '../../services/auth';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-login',
@@ -35,14 +36,18 @@ export class Login {
     const credenciales = { username: this.username, password: this.password };
     this.authService.login(credenciales).subscribe({
       next: (respuesta) => {
-        this.cargando = false; // NUEVO: Lo apagamos si fue exitoso
+        this.cargando = false; 
         if (respuesta.status === 'pending_2fa') { 
           this.necesita2FA = true; 
         }
       },
       error: (err: any) => {
-        this.cargando = false; // NUEVO: Lo apagamos si hubo error
-        alert('Credenciales incorrectas');
+        this.cargando = false; 
+        if (err.status === 429) {
+          Swal.fire('Bloqueo de Seguridad', 'Has intentado iniciar sesión demasiadas veces. Por favor, espera 5 minutos.', 'error');
+        } else {
+          Swal.fire('Error', 'Credenciales incorrectas', 'error');
+        }
       }
     });
   }
@@ -83,7 +88,11 @@ export class Login {
       error: (err: any) => {
         console.error('🔴 Error del backend en intento 2FA:', err);
         this.cargando = false; 
-        alert('Código incorrecto o caducado');
+        if (err.status === 429) {
+          Swal.fire('Bloqueo de Seguridad', 'Demasiados intentos fallidos. Por favor, espera 5 minutos.', 'error');
+        } else {
+          Swal.fire('Error', 'Código incorrecto o caducado', 'error');
+        }
       }
     });
   }

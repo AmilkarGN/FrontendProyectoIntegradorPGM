@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RolService, Rol } from '../../services/rol';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-roles',
@@ -58,37 +59,47 @@ export class RolesComponent implements OnInit {
         next: () => { 
           this.cargarRoles(); 
           this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Rol actualizado correctamente', 'success');
         },
-        error: (err) => console.error('Error al actualizar rol:', err)
+        error: (err) => Swal.fire('Error', 'Error al actualizar el rol.', 'error')
       });
     } else {
       this.rolService.crearRol(this.rolActual).subscribe({
         next: () => { 
           this.cargarRoles(); 
           this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Rol creado correctamente', 'success');
         },
-        error: (err) => {
-          console.error('Error al crear rol:', err);
-          alert('Hubo un error. Verifica que el nombre del rol no exista ya.');
-        }
+        error: (err) => Swal.fire('Error', 'Hubo un error. Verifica que el nombre del rol no exista ya.', 'error')
       });
     }
   }
 
   eliminarRol(rol: Rol): void {
     if (this.rolesProtegidos.includes(rol.nombre_rol)) {
-      alert(`El rol ${rol.nombre_rol} está protegido y no se puede borrar.`);
+      Swal.fire('Protegido', `El rol ${rol.nombre_rol} está protegido y no se puede borrar.`, 'info');
       return;
     }
 
-    if (rol.id && confirm(`¿Estás seguro de eliminar el rol "${rol.nombre_rol}"?`)) {
-      this.rolService.eliminarRol(rol.id).subscribe({
-        next: () => { 
-          this.roles = this.roles.filter(r => r.id !== rol.id); 
-        },
-        error: (err) => {
-          console.error('Error al eliminar rol:', err);
-          alert('No se pudo eliminar. Es posible que haya personal usando este rol en el sistema.');
+    if (rol.id) {
+      Swal.fire({
+        title: `¿Eliminar Rol?`,
+        text: `¿Estás seguro de eliminar el rol "${rol.nombre_rol}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.rolService.eliminarRol(rol.id!).subscribe({
+            next: () => { 
+              this.roles = this.roles.filter(r => r.id !== rol.id); 
+              Swal.fire('¡Eliminado!', 'El rol ha sido eliminado.', 'success');
+            },
+            error: (err) => Swal.fire('Error', 'No se pudo eliminar. Es posible que haya personal usando este rol en el sistema.', 'error')
+          });
         }
       });
     }

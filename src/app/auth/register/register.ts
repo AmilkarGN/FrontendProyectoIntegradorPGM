@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router'; 
-import { CommonModule } from '@angular/common'; 
+import { CommonModule } from '@angular/common';
+import Swal from 'sweetalert2'; 
 import { FormsModule } from '@angular/forms';
-import { UsuarioService } from '../../services/usuario';
 import { RolService } from '../../services/rol';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-register',
@@ -35,7 +36,7 @@ export class Register implements OnInit {
   rolClienteId: number | undefined;
 
   constructor(
-    private usuarioService: UsuarioService,
+    private authService: AuthService,
     private rolService: RolService,
     private router: Router
   ) {}
@@ -76,30 +77,34 @@ export class Register implements OnInit {
 
     this.cargando = true;
 
-    // Armamos el paquete para Django (Igual que en el CRUD)
-    const formData = new FormData();
-    formData.append('username', this.registroData.username);
-    formData.append('email', this.registroData.email);
-    formData.append('nombre', this.registroData.nombre);
-    formData.append('apellido_paterno', this.registroData.apellido_paterno);
-    formData.append('ci', this.registroData.ci);
-    formData.append('celular', this.registroData.celular);
-    formData.append('password', this.registroData.password);
-    
-    // INYECCIÓN AUTOMÁTICA DEL ROL CLIENTE (El usuario nunca elige esto)
-    formData.append('rol_id', this.rolClienteId.toString());
-    formData.append('is_active', 'true');
+    // Armamos el paquete para Django en formato JSON
+    const payload = {
+      username: this.registroData.username,
+      email: this.registroData.email,
+      nombre: this.registroData.nombre,
+      apellido_paterno: this.registroData.apellido_paterno,
+      ci: this.registroData.ci,
+      celular: this.registroData.celular,
+      password: this.registroData.password,
+      rol_id: this.rolClienteId, // INYECCIÓN AUTOMÁTICA DEL ROL CLIENTE
+      is_active: true
+    };
 
-    // Enviamos a guardar
-    this.usuarioService.crearUsuario(formData).subscribe({
+    // Enviamos a guardar a través del endpoint público de registro
+    this.authService.registro(payload).subscribe({
       next: () => {
-        this.cargando = false;
-        alert('¡Bienvenido a TransKelion! Tu cuenta ha sido creada con éxito. Ya puedes iniciar sesión.');
-        this.router.navigate(['/login']); // Lo mandamos al login
+        Swal.fire({
+          title: '¡Registro Exitoso!',
+          text: '¡Bienvenido a TransKelion! Tu cuenta ha sido creada con éxito. Ya puedes iniciar sesión.',
+          icon: 'success',
+          confirmButtonColor: '#4f46e5'
+        }).then(() => {
+          this.router.navigate(['/login']);
+        });
       },
       error: (err) => {
         this.cargando = false;
-        this.errorMsg = 'No se pudo crear la cuenta. Es posible que el Usuario o el CI ya estén registrados.';
+        this.errorMsg = 'No se pudo crear la cuenta. Verifica que los datos sean correctos o que el usuario no exista.';
         console.error('Error de registro:', err);
       }
     });

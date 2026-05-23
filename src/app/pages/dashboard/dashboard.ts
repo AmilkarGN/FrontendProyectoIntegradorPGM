@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
-// 1. Importamos el servicio
 import { AuthService } from '../../services/auth.service'; 
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,13 +18,22 @@ import { AuthService } from '../../services/auth.service';
 })
 export class Dashboard {
   
-  // 2. Inyectamos el servicio en el constructor
   constructor(private authService: AuthService) {}
 
-  // 3. Creamos la función que llamará tu botón en el HTML
   cerrarSesion() {
-    // Si sale esta alerta, ¡hemos resucitado el botón!
-    alert('🔥 DASHBOARD: ¡El botón funciona y me llamó!');
-    this.authService.logout();
+    Swal.fire({
+      title: '¿Cerrar Sesión?',
+      text: 'Tendrás que ingresar tus credenciales nuevamente para acceder.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.authService.logout();
+      }
+    });
   }
 }

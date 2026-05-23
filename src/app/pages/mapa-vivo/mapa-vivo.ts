@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, NgZone, OnDestroy, Inject, PLATFORM_ID } 
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { GoogleMapsModule, GoogleMap } from '@angular/google-maps';
 import { ViajeService } from '../../services/viaje';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-mapa-vivo',
@@ -215,8 +216,8 @@ export class MapaVivo implements OnInit, OnDestroy {
   }
 
   iniciarSimulacion() {
-    if (!this.viajeSeleccionado || !this.rutaPath.length) {
-      alert("Traza la ruta primero seleccionando el camión.");
+    if (this.rutaPath.length === 0) {
+      Swal.fire('Atención', 'Traza la ruta primero seleccionando el camión.', 'warning');
       return;
     }
 
@@ -227,8 +228,9 @@ export class MapaVivo implements OnInit, OnDestroy {
 
     this.simulacionInterval = setInterval(() => {
       if (this.pasoSimulacion >= this.rutaPath.length) {
-        this.detenerSimulacion();
-        alert("🏁 Simulación finalizada. El camión llegó a su destino.");
+        clearInterval(this.simulacionInterval);
+        this.simulacionActiva = false;
+        Swal.fire('Viaje Completado', '🏁 Simulación finalizada. El camión llegó a su destino.', 'success');
         return;
       }
 

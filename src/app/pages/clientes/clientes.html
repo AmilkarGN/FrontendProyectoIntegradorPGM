@@ -51,7 +51,7 @@
     <div class="crud-modal slide-in-bottom" style="max-width: 750px;">
       <h3>{{ modoModal === 'editar' ? 'Modificar Cliente' : 'Nuevo Registro de Cliente' }}</h3>
       
-      <form (ngSubmit)="guardarCliente()" #cliForm="ngForm">
+      <form (ngSubmit)="cliForm.invalid ? cliForm.control.markAllAsTouched() : guardarCliente()" #cliForm="ngForm">
         
         <div class="form-grid">
           <div class="form-group">
@@ -62,6 +62,7 @@
                 {{ user.nombre }} {{ user.apellido_paterno }} (CI: {{ user.ci }})
               </option>
             </select>
+                      <small *ngIf="cliForm.controls['usuario']?.invalid && cliForm.controls['usuario']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Tipo de Cliente *</label>
@@ -69,6 +70,7 @@
               <option value="Empresa">🏢 Empresa (Corporativo)</option>
               <option value="Particular">👤 Particular (Persona Natural)</option>
             </select>
+                      <small *ngIf="cliForm.controls['tipo_cliente']?.invalid && cliForm.controls['tipo_cliente']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -78,34 +80,39 @@
           <div class="form-group">
             <label>Razón Social <span *ngIf="clienteActual.tipo_cliente === 'Empresa'">*</span></label>
             <input type="text" name="razon_social" [(ngModel)]="clienteActual.razon_social" [required]="clienteActual.tipo_cliente === 'Empresa'" placeholder="Ej: Importadora Los Andes S.R.L.">
+                      <small *ngIf="cliForm.controls['razon_social']?.invalid && cliForm.controls['razon_social']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>NIT / CI de Facturación *</label>
-            <input type="text" name="nit" [(ngModel)]="clienteActual.nit" required placeholder="Ej: 102938475012">
+            <input type="text" name="nit" [(ngModel)]="clienteActual.nit" required placeholder="Ej: 102938475012" pattern="[0-9]+">
+                      <small *ngIf="cliForm.controls['nit']?.invalid && cliForm.controls['nit']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="form-group">
           <label>Dirección Fiscal *</label>
           <input type="text" name="direccion_fiscal" [(ngModel)]="clienteActual.direccion_fiscal" required placeholder="Zona, Calle, Número de la empresa o domicilio">
-        </div>
+                    <small *ngIf="cliForm.controls['direccion_fiscal']?.invalid && cliForm.controls['direccion_fiscal']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
 
         <h4 style="margin: 20px 0 10px; color: #4f46e5; border-bottom: 1px solid #e0e7ff; padding-bottom: 5px;">Contacto Comercial (Oficina Central)</h4>
 
         <div class="form-grid">
           <div class="form-group">
             <label>Contacto Principal</label>
-            <input type="text" name="contacto_principal" [(ngModel)]="clienteActual.contacto_principal" placeholder="Ej: Ing. Roberto Carlos">
+            <input type="text" name="contacto_principal" [(ngModel)]="clienteActual.contacto_principal" placeholder="Ej: Ing. Roberto Carlos" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.]+">
+                      <small *ngIf="cliForm.controls['contacto_principal']?.invalid && cliForm.controls['contacto_principal']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Teléfono Principal</label>
             <input type="text" name="telefono_principal" [(ngModel)]="clienteActual.telefono_principal" pattern="[0-9+ ]+" placeholder="Ej: 71234567">
+                      <small *ngIf="cliForm.controls['telefono_principal']?.invalid && cliForm.controls['telefono_principal']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="modal-actions" style="margin-top: 25px;">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" [disabled]="cliForm.invalid">Guardar Cliente</button>
+          <button type="submit" class="btn-save" >Guardar Cliente</button>
         </div>
       </form>
     </div>

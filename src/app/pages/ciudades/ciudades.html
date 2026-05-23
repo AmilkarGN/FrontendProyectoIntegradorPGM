@@ -47,7 +47,7 @@
     <div class="crud-modal slide-in-bottom">
       <h3>{{ ciudadActual.id ? 'Modificar Ciudad' : 'Nueva Ciudad' }}</h3>
       
-      <form (ngSubmit)="guardarCiudad()" #ciudadForm="ngForm">
+      <form (ngSubmit)="ciudadForm.invalid ? ciudadForm.control.markAllAsTouched() : guardarCiudad()" #ciudadForm="ngForm">
         
         <div class="form-group">
           <label for="inputCiudad">Nombre de la Ciudad *</label>
@@ -60,6 +60,7 @@
           <div *ngIf="nombreCtrl.invalid && nombreCtrl.touched" class="error-msg">
             <span *ngIf="nombreCtrl.errors?.['required']">El nombre es obligatorio.</span>
             <span *ngIf="nombreCtrl.errors?.['pattern']">Solo se permiten letras.</span>
+                      <small *ngIf="ciudadForm.controls['nombre']?.invalid && ciudadForm.controls['nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
         
@@ -72,6 +73,7 @@
           <div *ngIf="regionCtrl.invalid && regionCtrl.touched" class="error-msg">
             <span *ngIf="regionCtrl.errors?.['required']">La región es obligatoria.</span>
             <span *ngIf="regionCtrl.errors?.['pattern']">Solo se permiten letras.</span>
+                      <small *ngIf="ciudadForm.controls['region_estado']?.invalid && ciudadForm.controls['region_estado']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -84,12 +86,13 @@
           <div *ngIf="paisCtrl.invalid && paisCtrl.touched" class="error-msg">
             <span *ngIf="paisCtrl.errors?.['required']">El país es obligatorio.</span>
             <span *ngIf="paisCtrl.errors?.['pattern']">Solo se permiten letras.</span>
+                      <small *ngIf="ciudadForm.controls['pais']?.invalid && ciudadForm.controls['pais']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" [disabled]="ciudadForm.invalid">
+          <button type="submit" class="btn-save" >
             Guardar
           </button>
         </div>

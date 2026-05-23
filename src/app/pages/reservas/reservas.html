@@ -44,7 +44,7 @@
       <h3>{{ modoModal === 'ver' ? 'Detalles de la Reserva' : 'Planificación de Ruta y Reserva' }}</h3>
       
       <div class="reserva-grid">
-        <form (ngSubmit)="guardar()" class="form-scroll">
+        <form (ngSubmit)="reservaForm.invalid ? reservaForm.control.markAllAsTouched() : guardar()" class="form-scroll" #reservaForm="ngForm">
           
           <div class="form-group">
             <label>Cliente Solicitante *</label>
@@ -53,11 +53,13 @@
                 {{ c.razon_social || c.usuario_detalles?.nombre }}
               </option>
             </select>
+                      <small *ngIf="reservaForm.controls['cliente']?.invalid && reservaForm.controls['cliente']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Fecha Solicitada de Viaje *</label>
             <input type="date" name="fecha" [(ngModel)]="reservaActual.fecha_tentativa_viaje" [min]="fechaMinima" [disabled]="modoModal === 'ver'" required>
+                      <small *ngIf="reservaForm.controls['fecha']?.invalid && reservaForm.controls['fecha']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div style="background: #fffbeb; border-left: 4px solid #fbbf24; padding: 8px; margin-bottom: 15px; font-size: 0.85rem; color: #92400e;" *ngIf="modoModal === 'crear'">
@@ -67,18 +69,21 @@
           <div class="form-group">
             <label>Punto de Recojo (Origen) *</label>
             <input id="origenInput" type="text" name="origen" [(ngModel)]="reservaActual.direccion_origen" placeholder="Busca o haz clic..." [disabled]="modoModal === 'ver'" required>
+                      <small *ngIf="reservaForm.controls['origen']?.invalid && reservaForm.controls['origen']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Punto de Entrega (Destino) *</label>
             <input id="destinoInput" type="text" name="destino" [(ngModel)]="reservaActual.direccion_destino" placeholder="Busca o haz clic..." [disabled]="modoModal === 'ver'" required>
+                      <small *ngIf="reservaForm.controls['destino']?.invalid && reservaForm.controls['destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label>Peso (Kg)</label>
-              <input type="number" name="peso" [(ngModel)]="reservaActual.peso_estimado_kg" [disabled]="modoModal === 'ver'" required>
-            </div>
+              <input type="number" name="peso" [(ngModel)]="reservaActual.peso_estimado_kg" [disabled]="modoModal === 'ver'" min="0.1" required>
+                        <small *ngIf="reservaForm.controls['peso']?.invalid && reservaForm.controls['peso']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
             <div class="form-group">
               <label style="margin-top: 10px;">
                 <input type="checkbox" name="fragil" [(ngModel)]="reservaActual.es_fragil" [disabled]="modoModal === 'ver'"> Es Carga Frágil
@@ -90,12 +95,14 @@
           <div class="form-row">
             <div class="form-group">
               <label>Persona que recibe *</label>
-              <input type="text" name="contacto_destino" [(ngModel)]="reservaActual.contacto_destino" [disabled]="modoModal === 'ver'" required>
-            </div>
+              <input type="text" name="contacto_destino" [(ngModel)]="reservaActual.contacto_destino" [disabled]="modoModal === 'ver'" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" required>
+                        <small *ngIf="reservaForm.controls['contacto_destino']?.invalid && reservaForm.controls['contacto_destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
             <div class="form-group">
               <label>Teléfono Destino *</label>
-              <input type="text" name="telefono_destino" [(ngModel)]="reservaActual.telefono_destino" [disabled]="modoModal === 'ver'" required>
-            </div>
+              <input type="text" name="telefono_destino" [(ngModel)]="reservaActual.telefono_destino" [disabled]="modoModal === 'ver'" pattern="[0-9]+" required>
+                        <small *ngIf="reservaForm.controls['telefono_destino']?.invalid && reservaForm.controls['telefono_destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
           </div>
 
           <div class="resumen-viaje" *ngIf="reservaActual.distancia_real_km">
@@ -106,7 +113,7 @@
 
           <div class="modal-actions" style="margin-top: 20px;">
             <button type="button" class="btn-cancel" (click)="mostrarModal = false">{{ modoModal === 'ver' ? 'Cerrar Detalles' : 'Cancelar' }}</button>
-            <button type="submit" class="btn-save" *ngIf="modoModal === 'crear'">Guardar Reserva</button>
+            <button type="submit" class="btn-save" *ngIf="modoModal === 'crear'" >Guardar Reserva</button>
           </div>
         </form>
 

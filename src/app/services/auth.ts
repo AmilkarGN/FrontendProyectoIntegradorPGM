@@ -42,5 +42,11 @@ export class AuthService {
     if (recordar) {
       localStorage.setItem('transkelion_refresh', tokens.refresh);
     }
-  }}
+  }
+
+  // 4. NUEVA FUNCIÓN: Registro público
+  registro(datos: any) {
+    return this.http.post<any>('http://127.0.0.1:8000/api/registro/', datos);
+  }
+}
 

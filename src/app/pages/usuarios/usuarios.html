@@ -58,12 +58,13 @@
     <div class="crud-modal slide-in-bottom" style="max-width: 700px;">
       <h3>{{ modoModal === 'editar' ? 'Actualizar Usuario' : 'Nuevo Registro' }}</h3>
       
-      <form (ngSubmit)="guardarUsuario()" #userForm="ngForm">
+      <form (ngSubmit)="userForm.invalid ? userForm.control.markAllAsTouched() : guardarUsuario()" #userForm="ngForm">
         
         <div class="form-grid">
           <div class="form-group">
             <label>Nombre de Usuario (Login) *</label>
-            <input type="text" name="username" [(ngModel)]="usuarioActual.username" required [disabled]="modoModal === 'editar'" #uCtrl="ngModel" [class.invalid]="uCtrl.invalid && uCtrl.touched">
+            <input type="text" name="username" [(ngModel)]="usuarioActual.username" required [disabled]="modoModal === 'editar'" #uCtrl="ngModel" [class.invalid]="uCtrl.invalid && uCtrl.touched" pattern="[a-zA-Z0-9_]+">
+                      <small *ngIf="userForm.controls['username']?.invalid && userForm.controls['username']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Foto de Perfil</label>
@@ -74,22 +75,26 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Nombre *</label>
-            <input type="text" name="nombre" [(ngModel)]="usuarioActual.nombre" required #nCtrl="ngModel" [class.invalid]="nCtrl.invalid && nCtrl.touched">
+            <input type="text" name="nombre" [(ngModel)]="usuarioActual.nombre" required #nCtrl="ngModel" [class.invalid]="nCtrl.invalid && nCtrl.touched" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+">
+                      <small *ngIf="userForm.controls['nombre']?.invalid && userForm.controls['nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Apellido Paterno *</label>
-            <input type="text" name="paterno" [(ngModel)]="usuarioActual.apellido_paterno" required #pCtrl="ngModel" [class.invalid]="pCtrl.invalid && pCtrl.touched">
+            <input type="text" name="paterno" [(ngModel)]="usuarioActual.apellido_paterno" required #pCtrl="ngModel" [class.invalid]="pCtrl.invalid && pCtrl.touched" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+">
+                      <small *ngIf="userForm.controls['paterno']?.invalid && userForm.controls['paterno']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
             <label>Apellido Materno</label>
-            <input type="text" name="materno" [(ngModel)]="usuarioActual.apellido_materno">
+            <input type="text" name="materno" [(ngModel)]="usuarioActual.apellido_materno" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+">
+                      <small *ngIf="userForm.controls['materno']?.invalid && userForm.controls['materno']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>CI (Carnet) *</label>
-            <input type="text" name="ci" [(ngModel)]="usuarioActual.ci" required #ciCtrl="ngModel" [class.invalid]="ciCtrl.invalid && ciCtrl.touched">
+            <input type="text" name="ci" [(ngModel)]="usuarioActual.ci" required #ciCtrl="ngModel" [class.invalid]="ciCtrl.invalid && ciCtrl.touched" pattern="[a-zA-Z0-9-]+">
+                      <small *ngIf="userForm.controls['ci']?.invalid && userForm.controls['ci']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -97,10 +102,12 @@
           <div class="form-group">
             <label>Correo Electrónico *</label>
             <input type="email" name="email" [(ngModel)]="usuarioActual.email" required #eCtrl="ngModel" [class.invalid]="eCtrl.invalid && eCtrl.touched">
+                      <small *ngIf="userForm.controls['email']?.invalid && userForm.controls['email']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Celular *</label>
-            <input type="text" name="celular" [(ngModel)]="usuarioActual.celular" required #celCtrl="ngModel" [class.invalid]="celCtrl.invalid && celCtrl.touched">
+            <input type="text" name="celular" [(ngModel)]="usuarioActual.celular" required #celCtrl="ngModel" [class.invalid]="celCtrl.invalid && celCtrl.touched" pattern="[0-9+ ]+">
+                      <small *ngIf="userForm.controls['celular']?.invalid && userForm.controls['celular']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -111,10 +118,12 @@
               <option [ngValue]="undefined" disabled>-- Seleccione Rol --</option>
               <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre_rol }}</option>
             </select>
+                      <small *ngIf="userForm.controls['rol_id']?.invalid && userForm.controls['rol_id']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Contraseña {{ modoModal === 'editar' ? '(Opcional)' : '*' }}</label>
             <input type="password" name="password" [(ngModel)]="usuarioActual.password" [required]="modoModal === 'crear'" #pwCtrl="ngModel" [class.invalid]="pwCtrl.invalid && pwCtrl.touched">
+                      <small *ngIf="userForm.controls['password']?.invalid && userForm.controls['password']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -125,7 +134,7 @@
 
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" [disabled]="userForm.invalid">
+          <button type="submit" class="btn-save" >
             Guardar Personal
           </button>
         </div>

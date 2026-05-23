@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConductorService, Conductor, CategoriaLicencia } from '../../services/conductor';
 import { UsuarioService, Usuario } from '../../services/usuario';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-conductores',
@@ -21,23 +22,10 @@ export class ConductoresComponent implements OnInit {
   modoModal: 'crear' | 'editar' | 'ver' = 'crear';
   
   fechaHoy: string = new Date().toISOString().split('T')[0];
+  fechaMenos18Anios: string = new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0];
   usuariosDisponibles: Usuario[] = [];
   conductorActual: Conductor | any = {}; 
   baseMediaUrl = 'http://localhost:8000';
-
-  // --- VARIABLES PARA EL MODAL DE ALERTA/CONFIRMACIÓN ---
-  mostrarAlerta = false;
-  alertaConfig: {
-    tipo: 'error' | 'success' | 'warning' | 'confirmacion';
-    titulo: string;
-    mensaje: string;
-    textoBotonAceptar?: string;
-    textoBotonCancelar?: string;
-  } = { tipo: 'warning', titulo: '', mensaje: '' };
-  
-  // Guardamos la acción pendiente si es una confirmación
-  accionConfirmacion: (() => void) | null = null;
-
   constructor(
     private conductorService: ConductorService,
     private usuarioService: UsuarioService
@@ -58,7 +46,7 @@ export class ConductoresComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error al cargar usuarios:', err);
-        this.abrirAlerta('error', 'Error de Carga', 'No se pudieron cargar los usuarios disponibles.');
+        Swal.fire('Error de Carga', 'No se pudieron cargar los usuarios disponibles.', 'error');
         this.cargando = false;
       }
     });
@@ -73,7 +61,7 @@ export class ConductoresComponent implements OnInit {
       },
       error: (err) => { 
         console.error('Error al cargar conductores:', err); 
-        this.abrirAlerta('error', 'Error de Carga', 'No se pudieron cargar los datos de los conductores.');
+        Swal.fire('Error de Carga', 'No se pudieron cargar los datos de los conductores.', 'error');
         this.cargando = false; 
       }
     });
@@ -138,7 +126,7 @@ export class ConductoresComponent implements OnInit {
   // --- LÓGICA DE GUARDADO MEJORADA (Con validación y sanitización) ---
 guardarConductor(form: any): void {
     if (form.invalid) {
-      this.abrirAlerta('warning', 'Formulario Incompleto', 'Por favor, llena todos los campos obligatorios marcados con asterisco (*).');
+      Swal.fire('Formulario Incompleto', 'Por favor, llena todos los campos obligatorios marcados con asterisco (*).', 'warning');
       Object.keys(form.controls).forEach(key => form.controls[key].markAsTouched());
       return; 
     }
@@ -150,21 +138,25 @@ guardarConductor(form: any): void {
       
       // 👇 NUEVA VALIDACIÓN: Bloquea a los "viajeros del tiempo"
       if (edadConductor < 0) {
-        this.abrirAlerta('error', 'Fecha de Nacimiento Inválida', 'La fecha seleccionada está en el futuro. Verifica el año de nacimiento.');
+        Swal.fire('Fecha de Nacimiento Inválida', 'La fecha seleccionada está en el futuro. Verifica el año de nacimiento.', 'error');
         return; // Detenemos todo aquí
       }
       
       if (edadConductor < categoriaSeleccionada.edad_minima) {
-        this.abrirAlerta(
-          'confirmacion',
-          '⚠️ Alerta de Normativa',
-          `La ${categoriaSeleccionada.nombre} exige una edad mínima de ${categoriaSeleccionada.edad_minima} años.<br><br>El conductor seleccionado tiene <strong>${edadConductor} años.</strong><br><br>¿Desea asignar esta licencia bajo su responsabilidad administrativa?`,
-          'Sí, Asignar',
-          'Cancelar'
-        );
-        this.accionConfirmacion = () => {
-          this.ejecutarGuardado();
-        };
+        Swal.fire({
+          title: '⚠️ Alerta de Normativa',
+          html: `La ${categoriaSeleccionada.nombre} exige una edad mínima de ${categoriaSeleccionada.edad_minima} años.<br><br>El conductor seleccionado tiene <strong>${edadConductor} años.</strong><br><br>¿Desea asignar esta licencia bajo su responsabilidad administrativa?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#eab308',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Sí, Asignar',
+          cancelButtonText: 'Cancelar'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.ejecutarGuardado();
+          }
+        });
         return; 
       }
     }
@@ -186,7 +178,7 @@ guardarConductor(form: any): void {
         next: () => { 
           this.cargarDatosIniciales(); 
           this.cerrarModal(); 
-          this.abrirAlerta('success', '¡Éxito!', 'Perfil de conductor actualizado correctamente.');
+          Swal.fire('¡Éxito!', 'Perfil de conductor actualizado correctamente.', 'success');
         },
         error: (err) => this.mostrarErrorBackend(err)
       });
@@ -195,7 +187,7 @@ guardarConductor(form: any): void {
         next: () => { 
           this.cargarDatosIniciales(); 
           this.cerrarModal(); 
-          this.abrirAlerta('success', '¡Éxito!', 'Nuevo conductor registrado correctamente.');
+          Swal.fire('¡Éxito!', 'Nuevo conductor registrado correctamente.', 'success');
         },
         error: (err) => this.mostrarErrorBackend(err)
       });
@@ -213,52 +205,35 @@ guardarConductor(form: any): void {
       }
     }
     
-    this.abrirAlerta('error', 'Error del Servidor', msg);
+    Swal.fire('Error del Servidor', msg, 'error');
   }
 
-  // --- LÓGICA DE ELIMINACIÓN ---
   eliminarConductor(id: number | undefined): void {
     if (id) {
-      this.abrirAlerta(
-        'confirmacion',
-        '¿Eliminar Perfil?',
-        '¿Estás seguro de eliminar este perfil de conductor? (El usuario base seguirá existiendo en el sistema).',
-        'Sí, Eliminar',
-        'Cancelar'
-      );
-      
-      this.accionConfirmacion = () => {
-        this.conductorService.eliminarConductor(id).subscribe({
-          next: () => {
-            this.conductores = this.conductores.filter(c => c.id !== id);
-            this.cargarUsuariosFiltrados();
-            this.abrirAlerta('success', 'Eliminado', 'El perfil ha sido removido exitosamente.');
-          },
-          error: (err) => {
-            console.error('Error:', err);
-            this.abrirAlerta('error', 'Error', 'No se pudo eliminar el perfil.');
-          }
-        });
-      };
-    }
-  }
-
-  // --- CONTROLADOR DEL MODAL DE ALERTA ---
-  abrirAlerta(tipo: 'error' | 'success' | 'warning' | 'confirmacion', titulo: string, mensaje: string, btnAceptar = 'Aceptar', btnCancelar = 'Cancelar') {
-    this.alertaConfig = { tipo, titulo, mensaje, textoBotonAceptar: btnAceptar, textoBotonCancelar: btnCancelar };
-    this.mostrarAlerta = true;
-  }
-
-  cerrarAlerta() {
-    this.mostrarAlerta = false;
-    this.accionConfirmacion = null;
-  }
-
-  aceptarConfirmacion() {
-    this.mostrarAlerta = false;
-    if (this.accionConfirmacion) {
-      this.accionConfirmacion();
-      this.accionConfirmacion = null;
+      Swal.fire({
+        title: '¿Eliminar Perfil?',
+        text: '¿Estás seguro de eliminar este perfil de conductor? (El usuario base seguirá existiendo en el sistema).',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, Eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.conductorService.eliminarConductor(id).subscribe({
+            next: () => {
+              this.conductores = this.conductores.filter(c => c.id !== id);
+              this.cargarUsuariosFiltrados();
+              Swal.fire('Eliminado', 'El perfil ha sido removido exitosamente.', 'success');
+            },
+            error: (err) => {
+              console.error('Error:', err);
+              Swal.fire('Error', 'No se pudo eliminar el perfil.', 'error');
+            }
+          });
+        }
+      });
     }
   }
 

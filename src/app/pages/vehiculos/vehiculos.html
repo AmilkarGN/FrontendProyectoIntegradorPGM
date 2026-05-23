@@ -63,12 +63,13 @@
     <div class="crud-modal slide-in-bottom" style="max-width: 800px;">
       <h3>{{ modoModal === 'editar' ? 'Actualizar Vehículo' : 'Nuevo Registro de Flota' }}</h3>
       
-      <form (ngSubmit)="guardarVehiculo()" #vehForm="ngForm">
+      <form (ngSubmit)="vehForm.invalid ? vehForm.control.markAllAsTouched() : guardarVehiculo()" #vehForm="ngForm">
         
         <div class="form-grid">
           <div class="form-group">
             <label>Número de Placa *</label>
-            <input type="text" name="placa" [(ngModel)]="vehiculoActual.placa" required [disabled]="modoModal === 'editar'" placeholder="Ej: 4521-ABC" style="text-transform: uppercase;">
+            <input type="text" name="placa" [(ngModel)]="vehiculoActual.placa" required [disabled]="modoModal === 'editar'" placeholder="Ej: 4521-ABC" style="text-transform: uppercase;" pattern="[a-zA-Z0-9-]+">
+                      <small *ngIf="vehForm.controls['placa']?.invalid && vehForm.controls['placa']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Foto del Vehículo</label>
@@ -83,6 +84,7 @@
               <option [ngValue]="null" disabled>-- Seleccione Modelo --</option>
               <option *ngFor="let m of modelos" [value]="m.id">{{ m.marca }} {{ m.nombre_modelo }} ({{m.anio}})</option>
             </select>
+                      <small *ngIf="vehForm.controls['modelo']?.invalid && vehForm.controls['modelo']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Tipo de Vehículo *</label>
@@ -90,13 +92,15 @@
               <option [ngValue]="null" disabled>-- Seleccione Tipo --</option>
               <option *ngFor="let t of tipos" [value]="t.id">{{ t.nombre }} ({{t.capacidad_carga_kg}} Kg)</option>
             </select>
+                      <small *ngIf="vehForm.controls['tipo']?.invalid && vehForm.controls['tipo']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
             <label>Número de Chasis (VIN)</label>
-            <input type="text" name="chasis" [(ngModel)]="vehiculoActual.chasis">
+            <input type="text" name="chasis" [(ngModel)]="vehiculoActual.chasis" pattern="[a-zA-Z0-9-]+">
+                      <small *ngIf="vehForm.controls['chasis']?.invalid && vehForm.controls['chasis']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Color</label>
@@ -107,11 +111,13 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Vencimiento SOAT</label>
-            <input type="date" name="soat" [(ngModel)]="vehiculoActual.vencimiento_soat">
+            <input type="date" name="soat" [(ngModel)]="vehiculoActual.vencimiento_soat" min="{{fechaHoy}}">
+                      <small *ngIf="vehForm.controls['soat']?.invalid && vehForm.controls['soat']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Vencimiento Inspección Técnica</label>
-            <input type="date" name="itv" [(ngModel)]="vehiculoActual.vencimiento_inspeccion_tecnica">
+            <input type="date" name="itv" [(ngModel)]="vehiculoActual.vencimiento_inspeccion_tecnica" min="{{fechaHoy}}">
+                      <small *ngIf="vehForm.controls['itv']?.invalid && vehForm.controls['itv']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -121,11 +127,12 @@
             <option [ngValue]="null" disabled>-- Seleccione Estado --</option>
             <option *ngFor="let e of estados" [value]="e.id">{{ e.nombre }}</option>
           </select>
-        </div>
+                    <small *ngIf="vehForm.controls['estado']?.invalid && vehForm.controls['estado']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
 
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" [disabled]="vehForm.invalid">Guardar Vehículo</button>
+          <button type="submit" class="btn-save" >Guardar Vehículo</button>
         </div>
       </form>
     </div>

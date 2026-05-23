@@ -64,7 +64,7 @@
         <h3>{{ esEdicion ? '✏️ Editar Viaje' : '🚚 Programar Salida y Consolidar Carga' }}</h3>
       </div>
       
-      <form (ngSubmit)="guardarViaje()">
+      <form (ngSubmit)="viajeForm.invalid ? viajeForm.control.markAllAsTouched() : guardarViaje()" #viajeForm="ngForm">
         
         <div class="grid-fechas">
           <div class="form-group">
@@ -77,6 +77,7 @@
               <option value="">-- Seleccionar Unidad Disponible --</option>
               <option *ngFor="let a of asignacionesDisponibles" [value]="a.id">{{ a.conductor_nombre }} ({{ a.vehiculo_placa || a.vehiculo }})</option>
             </select>
+                      <small *ngIf="viajeForm.controls['asignacion']?.invalid && viajeForm.controls['asignacion']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div> <div class="box-reservas" *ngIf="!esEdicion">
           <label class="label-azul">📦 Reservas Disponibles para Envío</label>
@@ -112,11 +113,13 @@
           <div class="form-group">
             <label>Fecha de Salida</label>
             <input type="datetime-local" name="fsalida" [(ngModel)]="nuevoViaje.fecha_salida" (change)="calcularLlegadaAutomatica(0)" class="input-claro input-calendario" required>
+                      <small *ngIf="viajeForm.controls['fsalida']?.invalid && viajeForm.controls['fsalida']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
             <label>Llegada Estimada</label>
             <input type="datetime-local" name="fllegada" [(ngModel)]="nuevoViaje.fecha_llegada_estimada" class="input-claro input-calendario" [readonly]="!esEdicion" [ngClass]="{'input-bloqueado': !esEdicion}" required>
             <small *ngIf="!esEdicion" class="alerta-estimacion">⚠️ Estimación automática del sistema.</small>
+                      <small *ngIf="viajeForm.controls['fllegada']?.invalid && viajeForm.controls['fllegada']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
@@ -125,7 +128,8 @@
           <select name="estado" [(ngModel)]="nuevoViaje.estado_viaje" required class="input-claro">
             <option *ngFor="let e of estados" [value]="e.id">{{ e.nombre }}</option>
           </select>
-        </div>
+                    <small *ngIf="viajeForm.controls['estado']?.invalid && viajeForm.controls['estado']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
 
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="mostrarModalViaje = false">Cancelar</button>
@@ -215,12 +219,12 @@
         </table>
       </div>
 
-      <form (ngSubmit)="guardarViatico()" class="form-nuevo-viatico">
+      <form (ngSubmit)="viaticoForm.invalid ? viaticoForm.control.markAllAsTouched() : guardarViatico()" class="form-nuevo-viatico" #viaticoForm="ngForm">
         <h4>➕ Añadir Nuevo Gasto</h4>
         <div class="flex-inputs">
-          <input type="text" name="desc" [(ngModel)]="nuevoViatico.descripcion" placeholder="Ej: Peajes" required class="input-claro flex-2">
-          <input type="number" name="monto" [(ngModel)]="nuevoViatico.monto_total" placeholder="Monto" required class="input-claro flex-1">
-          <button type="submit" class="btn-add-viatico">Añadir</button>
+          <input type="text" name="desc" [(ngModel)]="nuevoViatico.descripcion" placeholder="Ej: Peajes" required pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\.,]+" class="input-claro flex-2">
+          <input type="number" name="monto" [(ngModel)]="nuevoViatico.monto_total" placeholder="Monto" required min="1" class="input-claro flex-1">
+          <button type="submit" class="btn-add-viatico" [disabled]="!nuevoViatico.descripcion || !nuevoViatico.monto_total || nuevoViatico.monto_total < 1">Añadir</button>
         </div>
       </form>
 

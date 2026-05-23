@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService, Usuario } from '../../services/usuario';
 import { RolService, Rol } from '../../services/rol';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-usuarios',
@@ -91,15 +92,13 @@ export class UsuariosComponent implements OnInit {
 
   // --- GUARDAR (Limpio y con FormData) ---
   guardarUsuario(): void {
-    // 1. Validaciones PRIMERO
     if (!this.usuarioActual.id && !this.usuarioActual.password) {
-      alert('La contraseña es obligatoria para nuevos usuarios.'); return;
+      Swal.fire('Atención', 'La contraseña es obligatoria para nuevos usuarios.', 'warning'); return;
     }
     if (!this.usuarioActual.rol_id) {
-      alert('Debes asignar un Rol.'); return;
+      Swal.fire('Atención', 'Debes asignar un Rol.', 'warning'); return;
     }
 
-    // 2. Empacar en FormData (Necesario para enviar imágenes)
     const formData = new FormData();
     formData.append('username', this.usuarioActual.username);
     formData.append('email', this.usuarioActual.email);
@@ -111,34 +110,55 @@ export class UsuariosComponent implements OnInit {
     formData.append('rol_id', this.usuarioActual.rol_id.toString());
     formData.append('is_active', this.usuarioActual.is_active ? 'true' : 'false');
     
-    // Solo enviamos el password si escribieron algo
     if (this.usuarioActual.password) {
       formData.append('password', this.usuarioActual.password);
     }
-    // Si seleccionaron una foto, la adjuntamos
     if (this.archivoFoto) {
       formData.append('foto_perfil', this.archivoFoto, this.archivoFoto.name);
     }
 
-    // 3. Ejecutar API
     if (this.modoModal === 'editar' && this.usuarioActual.id) {
       this.usuarioService.actualizarUsuario(this.usuarioActual.id, formData).subscribe({
-        next: () => { this.cargarUsuarios(); this.cerrarModal(); },
-        error: (err) => alert('Error al actualizar: Verifica los datos.')
+        next: () => { 
+          this.cargarUsuarios(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Usuario actualizado correctamente.', 'success');
+        },
+        error: (err) => Swal.fire('Error', 'Error al actualizar: Verifica los datos.', 'error')
       });
     } else {
       this.usuarioService.crearUsuario(formData).subscribe({
-        next: () => { this.cargarUsuarios(); this.cerrarModal(); },
-        error: (err) => alert('Error al crear: El CI o el Username ya están registrados.')
+        next: () => { 
+          this.cargarUsuarios(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Usuario creado correctamente.', 'success');
+        },
+        error: (err) => Swal.fire('Error', 'Error al crear: El CI o el Username ya están registrados.', 'error')
       });
     }
   }
 
   eliminarUsuario(id: number | undefined): void {
-    if (id && confirm('¿Estás seguro de eliminar a este usuario?')) {
-      this.usuarioService.eliminarUsuario(id).subscribe({
-        next: () => { this.usuarios = this.usuarios.filter(u => u.id !== id); },
-        error: (err) => console.error('Error al eliminar:', err)
+    if (id) {
+      Swal.fire({
+        title: '¿Eliminar Usuario?',
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.usuarioService.eliminarUsuario(id).subscribe({
+            next: () => { 
+              this.usuarios = this.usuarios.filter(u => u.id !== id); 
+              Swal.fire('¡Eliminado!', 'El usuario ha sido eliminado del sistema.', 'success');
+            },
+            error: (err) => Swal.fire('Error', 'No se pudo eliminar el usuario.', 'error')
+          });
+        }
       });
     }
   }

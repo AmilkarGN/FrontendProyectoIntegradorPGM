@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ViajeService } from '../../services/viaje'; // Asegúrate de que la ruta sea correcta (.service si aplica)
+import { ViajeService } from '../../services/viaje';
 import { ActivatedRoute } from '@angular/router';
+import Swal from 'sweetalert2';
 @Component({
   selector: 'app-viajes',
   standalone: true,
@@ -221,16 +222,27 @@ alSeleccionarVehiculo() {
   }
 
   eliminarViaje(viaje: any) {
-    if (confirm(`¿Estás seguro de que deseas cancelar y eliminar el viaje ${viaje.codigo_viaje}?`)) {
-      this.viajeService.eliminarViaje(viaje.codigo_viaje).subscribe({
-        next: () => {
-          this.mostrarMensaje('Viaje eliminado correctamente.', 'success');
-          this.cargarViajes();
-          this.cargarDatosMaestros();
-        },
-        error: () => this.mostrarMensaje('No se puede eliminar.', 'error')
-      });
-    }
+    Swal.fire({
+      title: '¿Eliminar Viaje?',
+      text: `¿Estás seguro de que deseas cancelar y eliminar el viaje ${viaje.codigo_viaje}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.viajeService.eliminarViaje(viaje.codigo_viaje).subscribe({
+          next: () => {
+            this.mostrarMensaje('Viaje eliminado correctamente.', 'success');
+            this.cargarViajes();
+            this.cargarDatosMaestros();
+          },
+          error: () => this.mostrarMensaje('No se puede eliminar.', 'error')
+        });
+      }
+    });
   }
 
   cambiarEstadoViaje(v: any, nuevoEstadoId: any) { 

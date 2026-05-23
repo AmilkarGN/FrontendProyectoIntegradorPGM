@@ -35,16 +35,18 @@
     <div class="crud-modal slide-in-bottom" style="max-width: 500px;">
       <h3>{{ categoriaActual.id ? 'Modificar Categoría' : 'Nueva Categoría' }}</h3>
       
-      <form (ngSubmit)="guardarCategoria()" #catForm="ngForm">
+      <form (ngSubmit)="catForm.invalid ? catForm.control.markAllAsTouched() : guardarCategoria()" #catForm="ngForm">
         <div class="form-group">
           <label>Nombre de la Categoría *</label>
           <input type="text" name="nombre" [(ngModel)]="categoriaActual.nombre" required placeholder="Ej: Categoría Profesional C">
-        </div>
+                    <small *ngIf="catForm.controls['nombre']?.invalid && catForm.controls['nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
         <div class="form-grid">
         <div class="form-group">
             <label>Edad Mínima Legal *</label>
             <input type="number" name="edad_minima" [(ngModel)]="categoriaActual.edad_minima" required>
-        </div>
+                    <small *ngIf="catForm.controls['edad_minima']?.invalid && catForm.controls['edad_minima']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
         <div class="form-group">
             <label>Tonelaje Máximo (t)</label>
             <input type="number" name="tonelaje" [(ngModel)]="categoriaActual.tonelaje_maximo">
@@ -58,7 +60,7 @@
 
         <div class="modal-actions" style="margin-top: 25px;">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" [disabled]="catForm.invalid">Guardar</button>
+          <button type="submit" class="btn-save" >Guardar</button>
         </div>
       </form>
     </div>

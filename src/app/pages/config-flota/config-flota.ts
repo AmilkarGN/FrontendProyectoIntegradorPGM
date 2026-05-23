@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { VehiculoService, ModeloVehiculo, TipoVehiculo, EstadoVehiculo } from '../../services/vehiculo';
 import { ConductorService, CategoriaLicencia } from '../../services/conductor';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-config-flota',
@@ -122,23 +123,34 @@ export class ConfigFlotaComponent implements OnInit {
       return;
     }
 
-    if (confirm('¿Desvincular este vehículo de su conductor actual?')) {
-      const payload = { esta_activa: false, fecha_devolucion: new Date().toISOString() };
-      
-      console.log('Enviando petición a Django...'); // 🕵️‍♂️ Investigador
+    Swal.fire({
+      title: '¿Desvincular?',
+      text: '¿Desvincular este vehículo de su conductor actual?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#eab308',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, desvincular',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const payload = { esta_activa: false, fecha_devolucion: new Date().toISOString() };
+        
+        console.log('Enviando petición a Django...'); // 🕵️‍♂️ Investigador
 
-      this.http.patch(`http://localhost:8000/api/asignaciones/${id}/`, payload).subscribe({
-        next: (res) => {
-          console.log('Respuesta exitosa de Django:', res); // 🕵️‍♂️ Investigador
-          this.mostrarMensaje('Unidad liberada correctamente.', 'success');
-          this.cargarDatosAsignacion();
-        },
-        error: (err) => {
-          console.error('ERROR COMPLETO HTTP:', err); // 🕵️‍♂️ Investigador
-          this.mostrarMensaje('Error al desvincular. Revisa la consola (F12).', 'error');
-        }
-      });
-    }
+        this.http.patch(`http://localhost:8000/api/asignaciones/${id}/`, payload).subscribe({
+          next: (res) => {
+            console.log('Respuesta exitosa de Django:', res); // 🕵️‍♂️ Investigador
+            this.mostrarMensaje('Unidad liberada correctamente.', 'success');
+            this.cargarDatosAsignacion();
+          },
+          error: (err) => {
+            console.error('ERROR COMPLETO HTTP:', err); // 🕵️‍♂️ Investigador
+            this.mostrarMensaje('Error al desvincular. Revisa la consola (F12).', 'error');
+          }
+        });
+      }
+    });
   }
 
   // --- LÓGICA DE CATÁLOGOS (Reemplazando alerts) ---
@@ -169,21 +181,32 @@ export class ConfigFlotaComponent implements OnInit {
   }
 
   eliminar(id: number): void {
-    if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-    
-    let serv;
-    if (this.tabActiva === 'modelos') serv = this.vehiculoService.eliminarModelo(id);
-    else if (this.tabActiva === 'tipos') serv = this.vehiculoService.eliminarTipo(id);
-    else serv = this.vehiculoService.eliminarEstado(id);
+    Swal.fire({
+      title: '¿Eliminar Registro?',
+      text: '¿Seguro que deseas eliminar este registro? Esta acción es irreversible.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        let serv;
+        if (this.tabActiva === 'modelos') serv = this.vehiculoService.eliminarModelo(id);
+        else if (this.tabActiva === 'tipos') serv = this.vehiculoService.eliminarTipo(id);
+        else serv = this.vehiculoService.eliminarEstado(id);
 
-    if (serv) {
-      serv.subscribe({
-        next: () => {
-          this.mostrarMensaje('Registro eliminado.', 'success');
-          this.cargarTodo();
-        },
-        error: () => this.mostrarMensaje('No se puede eliminar: está siendo usado.', 'error')
-      });
-    }
+        if (serv) {
+          serv.subscribe({
+            next: () => {
+              this.mostrarMensaje('Registro eliminado.', 'success');
+              this.cargarTodo();
+            },
+            error: () => this.mostrarMensaje('No se puede eliminar: está siendo usado.', 'error')
+          });
+        }
+      }
+    });
   }
 }

@@ -2,6 +2,7 @@ import { Component, OnInit, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CiudadService, Ciudad } from '../../services/ciudad';
+import Swal from 'sweetalert2';
 
 declare const google: any;
 
@@ -123,10 +124,29 @@ export class CiudadesComponent implements OnInit {
   }
 
   eliminarCiudad(id: number | undefined): void {
-    if (id && confirm('¿Estás seguro de que deseas eliminar esta ciudad?')) {
-      this.ciudadService.eliminarCiudad(id).subscribe({
-        next: () => { this.ciudades = this.ciudades.filter(c => c.id !== id); },
-        error: (err) => console.error('Error al eliminar:', err)
+    if (id) {
+      Swal.fire({
+        title: '¿Eliminar Ciudad?',
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.ciudadService.eliminarCiudad(id).subscribe({
+            next: () => { 
+              this.ciudades = this.ciudades.filter(c => c.id !== id); 
+              Swal.fire('¡Eliminado!', 'La ciudad ha sido eliminada.', 'success');
+            },
+            error: (err) => {
+              console.error('Error al eliminar:', err);
+              Swal.fire('Error', 'No se pudo eliminar la ciudad. Es posible que esté en uso.', 'error');
+            }
+          });
+        }
       });
     }
   }

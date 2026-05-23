@@ -48,7 +48,7 @@
     <div class="crud-modal slide-in-bottom">
       <h3>{{ modoModal === 'editar' ? 'Modificar Conductor' : 'Nuevo Registro de Conductor' }}</h3>
       
-      <form (ngSubmit)="guardarConductor(conductorForm)" #conductorForm="ngForm">
+      <form (ngSubmit)="conductorForm.invalid ? conductorForm.control.markAllAsTouched() : guardarConductor(conductorForm)" #conductorForm="ngForm">
         
         <div class="form-grid">
           
@@ -63,11 +63,13 @@
                 {{ conductorActual.usuario_detalles?.nombre }} {{ conductorActual.usuario_detalles?.apellido_paterno }}
               </option>
             </select>
+                      <small *ngIf="conductorForm.controls['usuario']?.invalid && conductorForm.controls['usuario']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Nro. de Licencia *</label>
-            <input type="text" class="form-control" [(ngModel)]="conductorActual.nro_licencia" name="nro_licencia" required>
+            <input type="text" class="form-control" [(ngModel)]="conductorActual.nro_licencia" name="nro_licencia" minlength="4" required>
+                      <small *ngIf="conductorForm.controls['nro_licencia']?.invalid && conductorForm.controls['nro_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
@@ -78,21 +80,25 @@
                 {{ c.nombre }} (Mín: {{ c.edad_minima }} años)
               </option>
             </select>
+                      <small *ngIf="conductorForm.controls['categoria_licencia']?.invalid && conductorForm.controls['categoria_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Fecha de Emisión *</label>
-            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_emision_licencia" name="fecha_emision_licencia" required>
+            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_emision_licencia" name="fecha_emision_licencia" max="{{fechaHoy}}" required>
+                      <small *ngIf="conductorForm.controls['fecha_emision_licencia']?.invalid && conductorForm.controls['fecha_emision_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Fecha de Vencimiento *</label>
-            <input type="date" class="form-control" [(ngModel)]="conductorActual.vencimiento_licencia" name="vencimiento_licencia" required>
+            <input type="date" class="form-control" [(ngModel)]="conductorActual.vencimiento_licencia" name="vencimiento_licencia" min="{{fechaHoy}}" required>
+                      <small *ngIf="conductorForm.controls['vencimiento_licencia']?.invalid && conductorForm.controls['vencimiento_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Fecha de Nacimiento *</label>
-            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_nacimiento" name="fecha_nacimiento" required>
+            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_nacimiento" name="fecha_nacimiento" max="{{fechaMenos18Anios}}" required>
+                      <small *ngIf="conductorForm.controls['fecha_nacimiento']?.invalid && conductorForm.controls['fecha_nacimiento']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
@@ -113,22 +119,25 @@
           <div class="form-group">
             <label>Dirección de Domicilio *</label>
             <input type="text" class="form-control" [(ngModel)]="conductorActual.direccion" name="direccion" required>
+                      <small *ngIf="conductorForm.controls['direccion']?.invalid && conductorForm.controls['direccion']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Contacto de Emergencia (Nombre) *</label>
-            <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_nombre" name="contacto_emergencia_nombre" required>
+            <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_nombre" name="contacto_emergencia_nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" required>
+                      <small *ngIf="conductorForm.controls['contacto_emergencia_nombre']?.invalid && conductorForm.controls['contacto_emergencia_nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Teléfono de Emergencia *</label>
-            <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_telefono" name="contacto_emergencia_telefono" required>
+            <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_telefono" name="contacto_emergencia_telefono" pattern="[0-9]+" required>
+                      <small *ngIf="conductorForm.controls['contacto_emergencia_telefono']?.invalid && conductorForm.controls['contacto_emergencia_telefono']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 
         <div class="modal-actions" style="margin-top: 25px; display: flex; gap: 15px;">
           <button type="button" class="btn-cancel" style="flex: 1;" (click)="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-save" style="flex: 1; background-color: #0f172a; color: white; border-radius: 8px; border: none; font-weight: 600;">Guardar Conductor</button>
+          <button type="submit" class="btn-save" style="flex: 1; background-color: #0f172a; color: white; border-radius: 8px; border: none; font-weight: 600;" >Guardar Conductor</button>
         </div>
       </form>
     </div>
@@ -175,37 +184,4 @@
   </div>
 
 </div>
-
-<div class="crud-modal-overlay alerta-overlay" *ngIf="mostrarAlerta" style="z-index: 10000;">
-  <div class="crud-modal modal-alerta fade-in">
-    
-    <div class="alerta-header" [ngClass]="alertaConfig.tipo">
-      <div class="alerta-icon">
-        <span *ngIf="alertaConfig.tipo === 'success'">✓</span>
-        <span *ngIf="alertaConfig.tipo === 'error'">✕</span>
-        <span *ngIf="alertaConfig.tipo === 'warning'">!</span>
-        <span *ngIf="alertaConfig.tipo === 'confirmacion'">?</span>
-      </div>
-      <h3>{{ alertaConfig.titulo }}</h3>
-    </div>
-
-    <div class="alerta-body">
-      <p [innerHTML]="alertaConfig.mensaje"></p>
-    </div>
-
-    <div class="alerta-footer">
-      <button class="btn-alerta-primary" *ngIf="alertaConfig.tipo !== 'confirmacion'" (click)="cerrarAlerta()">
-        Entendido
-      </button>
-
-      <ng-container *ngIf="alertaConfig.tipo === 'confirmacion'">
-        <button class="btn-alerta-secondary" (click)="cerrarAlerta()">
-          {{ alertaConfig.textoBotonCancelar }}
-        </button>
-        <button class="btn-alerta-danger" (click)="aceptarConfirmacion()">
-          {{ alertaConfig.textoBotonAceptar }}
-        </button>
-      </ng-container>
-    </div>
-  </div>
-</div>
+

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ReservaService, Reserva } from '../../services/reserva';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { RutaService, Ruta } from '../../services/ruta';
+import Swal from 'sweetalert2';
 
 declare const google: any;
 
@@ -175,11 +176,11 @@ export class ReservasComponent implements OnInit {
             title: 'Tu ubicación actual'
           });
         },
-        () => { alert("No se pudo obtener la ubicación exacta."); },
+        () => { Swal.fire('Error', 'No se pudo obtener la ubicación exacta.', 'error'); },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      alert("Tu navegador no soporta geolocalización.");
+      Swal.fire('Error', 'Tu navegador no soporta geolocalización.', 'error');
     }
   }
 
@@ -308,9 +309,9 @@ export class ReservasComponent implements OnInit {
         next: () => {
           this.cargarDatos();
           this.mostrarModal = false;
-          alert('✅ Reserva creada con éxito');
+          Swal.fire('¡Éxito!', 'Reserva creada con éxito', 'success');
         },
-        error: (err) => alert('❌ Error al crear la reserva')
+        error: (err) => Swal.fire('Error', 'Error al crear la reserva', 'error')
       });
       
     } else {
@@ -319,9 +320,9 @@ export class ReservasComponent implements OnInit {
         next: () => {
           this.cargarDatos();
           this.mostrarModal = false;
-          alert('✏️ Reserva actualizada con éxito');
+          Swal.fire('¡Éxito!', 'Reserva actualizada con éxito', 'success');
         },
-        error: (err) => alert('❌ Error al actualizar la reserva')
+        error: (err) => Swal.fire('Error', 'Error al actualizar la reserva', 'error')
       });
     }
   }
@@ -352,26 +353,36 @@ export class ReservasComponent implements OnInit {
   // --- ELIMINAR RESERVA ---
   // Ahora recibe el objeto completo (Reserva) tal como se lo manda el HTML
   eliminarReserva(reserva: Reserva): void {
-    // Verificamos si tiene la propiedad y extraemos el string
     const codigo = reserva.codigo_reserva; 
 
     if (!codigo) {
-      alert('Error: No se encontró el código de la reserva.');
+      Swal.fire('Error', 'No se encontró el código de la reserva.', 'error');
       return;
     }
 
-    if (confirm(`⚠️ ¿Estás seguro de que deseas eliminar la reserva ${codigo}?`)) {
-      this.reservaService.eliminarReserva(codigo).subscribe({
-        next: () => {
-          this.cargarDatos(); // Recargamos la tabla
-          alert('🗑️ Reserva eliminada');
-        },
-        error: (err) => {
-          console.error(err);
-          alert('❌ No se puede eliminar. Es posible que esté atada a un Viaje o Carga física en el sistema.');
-        }
-      });
-    }
+    Swal.fire({
+      title: '¿Eliminar Reserva?',
+      text: `⚠️ ¿Estás seguro de que deseas eliminar la reserva ${codigo}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.reservaService.eliminarReserva(codigo).subscribe({
+          next: () => {
+            this.cargarDatos(); // Recargamos la tabla
+            Swal.fire('Eliminada', 'Reserva eliminada exitosamente.', 'success');
+          },
+          error: (err) => {
+            console.error(err);
+            Swal.fire('Error', 'No se puede eliminar. Es posible que esté atada a un Viaje o Carga física en el sistema.', 'error');
+          }
+        });
+      }
+    });
   }
   
 }

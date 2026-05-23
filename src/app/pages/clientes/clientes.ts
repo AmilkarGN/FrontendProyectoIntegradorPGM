@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { UsuarioService, Usuario } from '../../services/usuario';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-clientes',
@@ -91,25 +92,47 @@ export class ClientesComponent implements OnInit {
   guardarCliente(): void {
     if (this.modoModal === 'editar' && this.clienteActual.id) {
       this.clienteService.actualizarCliente(this.clienteActual.id, this.clienteActual).subscribe({
-        next: () => { this.cargarDatosIniciales(); this.cerrarModal(); },
-        error: (err) => alert('Error al actualizar el cliente.')
+        next: () => { 
+          this.cargarDatosIniciales(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Cliente actualizado correctamente', 'success');
+        },
+        error: (err) => Swal.fire('Error', 'Error al actualizar el cliente.', 'error')
       });
     } else {
       this.clienteService.crearCliente(this.clienteActual).subscribe({
-        next: () => { this.cargarDatosIniciales(); this.cerrarModal(); },
-        error: (err) => alert('Error al guardar. Verifica que el usuario no sea ya un cliente.')
+        next: () => { 
+          this.cargarDatosIniciales(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Cliente creado correctamente', 'success');
+        },
+        error: (err) => Swal.fire('Error', 'Error al guardar. Verifica que el usuario no sea ya un cliente.', 'error')
       });
     }
   }
 
   eliminarCliente(id: number | undefined): void {
-    if (id && confirm('¿Estás seguro de eliminar este perfil de cliente? (El usuario seguirá existiendo)')) {
-      this.clienteService.eliminarCliente(id).subscribe({
-        next: () => {
-          this.clientes = this.clientes.filter(c => c.id !== id);
-          this.cargarUsuariosFiltrados(); 
-        },
-        error: (err) => alert('No se puede eliminar porque este cliente ya tiene rutas asignadas.')
+    if (id) {
+      Swal.fire({
+        title: '¿Eliminar Cliente?',
+        text: 'El usuario base seguirá existiendo en el sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.clienteService.eliminarCliente(id).subscribe({
+            next: () => {
+              this.clientes = this.clientes.filter(c => c.id !== id);
+              this.cargarUsuariosFiltrados(); 
+              Swal.fire('¡Eliminado!', 'El perfil de cliente fue removido.', 'success');
+            },
+            error: (err) => Swal.fire('Error', 'No se puede eliminar porque este cliente ya tiene rutas asignadas.', 'error')
+          });
+        }
       });
     }
   }

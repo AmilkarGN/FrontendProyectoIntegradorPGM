@@ -17,20 +17,22 @@
         {{ errorMsg }}
       </div>
 
-      <form (ngSubmit)="registrarCuenta()" #registroForm="ngForm">
+      <form (ngSubmit)="registroForm.invalid ? registroForm.control.markAllAsTouched() : registrarCuenta()" #registroForm="ngForm">
         
         <div class="row-inputs">
           <div class="form-column">
             <label class="input-label">Nombre *</label>
             <div class="input-group">
-              <input type="text" name="nombre" [(ngModel)]="registroData.nombre" required placeholder="Ej. Amilkar">
+              <input type="text" name="nombre" [(ngModel)]="registroData.nombre" required pattern="^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$" placeholder="Ej. Amilkar">
             </div>
+            <small *ngIf="registroForm.controls['nombre']?.invalid && registroForm.controls['nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Ingresa un nombre válido (solo letras).</small>
           </div>
           <div class="form-column">
             <label class="input-label">Apellido Paterno *</label>
             <div class="input-group">
-              <input type="text" name="apellido" [(ngModel)]="registroData.apellido_paterno" required placeholder="Ej. Gómez">
+              <input type="text" name="apellido" [(ngModel)]="registroData.apellido_paterno" required pattern="^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$" placeholder="Ej. Gómez">
             </div>
+            <small *ngIf="registroForm.controls['apellido']?.invalid && registroForm.controls['apellido']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Ingresa un apellido válido (solo letras).</small>
           </div>
         </div>
 
@@ -38,14 +40,16 @@
           <div class="form-column">
             <label class="input-label">Carnet (CI) *</label>
             <div class="input-group">
-              <input type="text" name="ci" [(ngModel)]="registroData.ci" required placeholder="Tu número de CI">
+              <input type="text" name="ci" [(ngModel)]="registroData.ci" required pattern="^[0-9]+(-[0-9A-Za-z]+)?$" placeholder="Tu número de CI">
             </div>
+            <small *ngIf="registroForm.controls['ci']?.invalid && registroForm.controls['ci']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Ingresa un CI válido.</small>
           </div>
           <div class="form-column">
             <label class="input-label">Celular *</label>
             <div class="input-group">
-              <input type="text" name="celular" [(ngModel)]="registroData.celular" required placeholder="Número de contacto">
+              <input type="text" name="celular" [(ngModel)]="registroData.celular" required pattern="^[0-9]{8}$" placeholder="Número de contacto">
             </div>
+            <small *ngIf="registroForm.controls['celular']?.invalid && registroForm.controls['celular']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Ingresa un celular válido (8 dígitos numéricos).</small>
           </div>
         </div>
         
@@ -53,11 +57,13 @@
         <div class="input-group">
         <input type="email" name="email" [(ngModel)]="registroData.email" required email placeholder="correo@ejemplo.com">
         </div>
+        <small *ngIf="registroForm.controls['email']?.invalid && registroForm.controls['email']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Correo obligatorio o formato inválido.</small>
         
         <label class="input-label">Nombre de Usuario (Login) *</label>
         <div class="input-group">
           <input type="text" name="username" [(ngModel)]="registroData.username" required placeholder="Crea tu usuario único">
         </div>
+        <small *ngIf="registroForm.controls['username']?.invalid && registroForm.controls['username']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Nombre de usuario obligatorio.</small>
         
         <div class="row-inputs">
           <div class="form-column">
@@ -65,9 +71,11 @@
             <div class="input-group password-group">
               <input [type]="verContrasena ? 'text' : 'password'" name="password" [(ngModel)]="registroData.password" required minlength="6" placeholder="Mín. 6 caract.">
               <button type="button" class="btn-eye" (click)="toggleContrasena()">
-                {{ verContrasena ? '🙈' : '👁️' }}
+                <svg *ngIf="verContrasena" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <svg *ngIf="!verContrasena" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </button>
             </div>
+            <small *ngIf="registroForm.controls['password']?.invalid && registroForm.controls['password']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Contraseña obligatoria (mín. 6 caracteres).</small>
           </div>
           
           <div class="form-column">
@@ -75,13 +83,15 @@
             <div class="input-group password-group">
               <input [type]="verConfirmarContrasena ? 'text' : 'password'" name="confirmarPassword" [(ngModel)]="registroData.confirmarPassword" required placeholder="Reingresa la clave">
               <button type="button" class="btn-eye" (click)="toggleConfirmarContrasena()">
-                {{ verConfirmarContrasena ? '🙈' : '👁️' }}
+                <svg *ngIf="verConfirmarContrasena" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <svg *ngIf="!verConfirmarContrasena" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </button>
             </div>
+            <small *ngIf="registroForm.controls['confirmarPassword']?.invalid && registroForm.controls['confirmarPassword']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Reingresa la contraseña.</small>
           </div>
         </div>
         
-        <button type="submit" class="btn-primary" [disabled]="registroForm.invalid || cargando">
+        <button type="submit" class="btn-primary" [disabled]="cargando">
           <span *ngIf="!cargando">Registrar Cuenta</span>
           <div class="spinner" *ngIf="cargando"></div>
         </button>
@@ -89,7 +99,7 @@
 
       <div class="footer-links">
         <p>¿Ya tienes una cuenta? <a routerLink="/login" class="link-action">Inicia sesión</a></p>
-        <p>Volver a la <a routerLink="/pages/landing" class="link-action">página principal</a></p>
+        <p>Volver a la <a routerLink="/" class="link-action">página principal</a></p>
       </div>
     </div>
 
