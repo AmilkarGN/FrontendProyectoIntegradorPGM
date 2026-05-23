@@ -60,25 +60,20 @@ export class Login {
         
        if (respuesta.status === 'success') {
           try {
-            console.log('🟡 3. Guardando token DIRECTAMENTE desde el Login...');
+            console.log('🟡 3. Guardando token a través de AuthService...');
             
-            // 1. Guardamos la sesión directo a la memoria, sin usar el servicio
-            localStorage.setItem('transkelion_token', respuesta.tokens.access);
-            localStorage.setItem('transkelion_refresh', respuesta.tokens.refresh);
-            localStorage.setItem('transkelion_user', JSON.stringify(respuesta.user));
+            // Usar el método unificado que respeta la opción de recordar dispositivo
+            this.authService.guardarSesion(respuesta.tokens, respuesta.user, this.recordarDispositivo);
             
-            console.log('🟢 4. ¡Token escrito! Revisando el bolsillo ahora mismo:', localStorage.getItem('transkelion_token'));
+            console.log('🟢 4. ¡Sesión guardada con éxito!');
             
-            // 2. Le damos un mini respiro de 50ms al disco duro y viajamos
-            setTimeout(() => {
-              this.router.navigate(['/dashboard']).then(pudoEntrar => {
-                if (pudoEntrar) {
-                  console.log('✅ 5. ¡Bienvenido al Dashboard!');
-                } else {
-                  console.error('🚨 5. ERROR: El Guardia lo bloqueó de nuevo.');
-                }
-              });
-            }, 50);
+            this.router.navigate(['/dashboard']).then(pudoEntrar => {
+              if (pudoEntrar) {
+                console.log('✅ 5. ¡Bienvenido al Dashboard!');
+              } else {
+                console.error('🚨 5. ERROR: El Guardia bloqueó la entrada al Dashboard.');
+              }
+            });
 
           } catch (errorGuardar) {
             console.error('🚨 ERROR FATAL AL GUARDAR SESIÓN:', errorGuardar);

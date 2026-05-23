@@ -7,7 +7,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   const platformId = inject(PLATFORM_ID);
 
   if (isPlatformBrowser(platformId)) {
-    const token = localStorage.getItem('transkelion_token');
+    const token = localStorage.getItem('transkelion_token') || sessionStorage.getItem('transkelion_token');
 
     // 👇 MICRÓFONOS ACTIVADOS 👇
     console.log('🕵️‍♂️ GUARDIA: Alguien quiere entrar a la ruta:', state.url);

@@ -27,14 +27,19 @@ export class AuthService {
 
   // 3. NUEVA FUNCIÓN: El cerebro de "Recordar Dispositivo"
   guardarSesion(tokens: any, user: any, recordar: boolean) {
-    // Si recordar es True, usamos localStorage (permanente). Si es False, sessionStorage (se borra al cerrar la pestaña)
+    // Limpiar sesiones previas de ambos almacenes para evitar conflictos de estado
+    localStorage.removeItem('transkelion_token');
+    localStorage.removeItem('transkelion_refresh');
+    localStorage.removeItem('transkelion_user');
+    sessionStorage.removeItem('transkelion_token');
+    sessionStorage.removeItem('transkelion_user');
+    
     const storage = recordar ? localStorage : sessionStorage;
     
     storage.setItem('transkelion_token', tokens.access);
     storage.setItem('transkelion_user', JSON.stringify(user));
     
     if (recordar) {
-      // Solo guardamos el token de 30 días si es un dispositivo de confianza
       localStorage.setItem('transkelion_refresh', tokens.refresh);
     }
   }}
