@@ -86,13 +86,23 @@ export class MapaVivo implements OnInit, OnDestroy {
     const bounds = new g.LatLngBounds(); 
 
     this.viajesActivos.forEach(viaje => {
-      const coords = { lat: parseFloat(viaje.latitud_actual), lng: parseFloat(viaje.longitud_actual) };
+      // 🚀 Si no hay latitud actual, usamos la de origen (esperando que inicie GPS)
+      const tieneGPS = viaje.latitud_actual && viaje.longitud_actual;
+      const lat = tieneGPS ? parseFloat(viaje.latitud_actual) : parseFloat(viaje.latitud_origen);
+      const lng = tieneGPS ? parseFloat(viaje.longitud_actual) : parseFloat(viaje.longitud_origen);
+
+      // Si por alguna razón ni origen tiene, lo saltamos
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      const coords = { lat, lng };
       bounds.extend(coords); 
 
       if (this.marcadoresCamiones[viaje.codigo_viaje]) {
         this.marcadoresCamiones[viaje.codigo_viaje].setPosition(coords);
         const icon = this.marcadoresCamiones[viaje.codigo_viaje].getIcon();
         icon.rotation = parseFloat(viaje.rumbo_actual || 0);
+        // Si no tiene GPS, lo pintamos de gris para indicar "En espera de transmisión"
+        icon.fillColor = tieneGPS ? '#3b82f6' : '#9ca3af';
         this.marcadoresCamiones[viaje.codigo_viaje].setIcon(icon);
       } else {
         this.marcadoresCamiones[viaje.codigo_viaje] = new g.Marker({
@@ -100,10 +110,14 @@ export class MapaVivo implements OnInit, OnDestroy {
           map: mapaReal,
           icon: {
             path: g.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 7, fillColor: '#3b82f6', fillOpacity: 1, strokeWeight: 2, strokeColor: '#ffffff',
+            scale: 7, 
+            fillColor: tieneGPS ? '#3b82f6' : '#9ca3af', 
+            fillOpacity: 1, 
+            strokeWeight: 2, 
+            strokeColor: '#ffffff',
             rotation: parseFloat(viaje.rumbo_actual || 0)
           },
-          title: `🚚 ${viaje.vehiculo_placa} - ${viaje.conductor_nombre}`,
+          title: tieneGPS ? `🚚 ${viaje.vehiculo_placa} - ${viaje.conductor_nombre}` : `🚚 ${viaje.vehiculo_placa} (Sin GPS) - ${viaje.conductor_nombre}`,
           zIndex: 999
         });
       }
@@ -135,9 +149,27 @@ export class MapaVivo implements OnInit, OnDestroy {
     const mapaReal = this.mapaComponente?.googleMap;
     if (!mapaReal) return;
 
-    const truckCoords = { lat: parseFloat(viaje.latitud_actual), lng: parseFloat(viaje.longitud_actual) };
-    mapaReal.setCenter(truckCoords);
-    mapaReal.setZoom(15);
+    const tieneGPS = viaje.latitud_actual && viaje.longitud_actual;
+    
+    if (!tieneGPS) {
+      Swal.fire({
+        title: 'Transmisión Inactiva',
+        text: 'Este vehículo aún no ha comenzado a transmitir su ubicación GPS. Se muestra temporalmente en su punto de origen.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#3b82f6'
+      });
+    }
+
+    const lat = tieneGPS ? parseFloat(viaje.latitud_actual) : parseFloat(viaje.latitud_origen);
+    const lng = tieneGPS ? parseFloat(viaje.longitud_actual) : parseFloat(viaje.longitud_origen);
+    
+    if (!isNaN(lat) && !isNaN(lng)) {
+      const truckCoords = { lat, lng };
+      mapaReal.setCenter(truckCoords);
+      mapaReal.setZoom(15);
+    }
+    
     this.resaltarCamionSeleccionado(viaje.codigo_viaje);
 
     // 👇 LA RUTA AHORA ES MÁS FÁCIL: Las coordenadas vienen directo en la raíz del JSON
@@ -170,6 +202,12 @@ export class MapaVivo implements OnInit, OnDestroy {
     if (!this.directionsRenderer?.getDirections() || !this.directionsRenderer.getDirections().routes.length) return;
     const g = (window as any).google.maps;
     const rutaBounds = this.directionsRenderer.getDirections().routes[0].bounds;
+    const tieneGPS = viaje.latitud_actual && viaje.longitud_actual;
+    if (!tieneGPS) {
+      this.alertaDesvio = "Esperando que inicie la transmisión GPS.";
+      return;
+    }
+
     const posActual = new g.LatLng(parseFloat(viaje.latitud_actual), parseFloat(viaje.longitud_actual));
 
     const toleranciaBounds = new g.LatLngBounds(
@@ -195,8 +233,11 @@ export class MapaVivo implements OnInit, OnDestroy {
         icon.scale = 9; 
         marcador.setZIndex(1000);
       } else {
-        icon.fillColor = '#94a3b8'; 
-        icon.scale = 6;
+        // Volvemos al azul normal o al gris (si no tiene GPS)
+        const v = this.viajesActivos.find(x => x.codigo_viaje === codigo);
+        const tieneGPS = v && v.latitud_actual && v.longitud_actual;
+        icon.fillColor = tieneGPS ? '#3b82f6' : '#9ca3af'; 
+        icon.scale = 7;
         marcador.setZIndex(999);
       }
       marcador.setIcon(icon);

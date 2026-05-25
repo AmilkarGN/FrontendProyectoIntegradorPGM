@@ -22,6 +22,7 @@
         <button class="btn-filter" [class.active]="filtroActivo === 'todos'" (click)="cambiarFiltro('todos')">🌐 Riesgo Acumulado</button>
         <button class="btn-filter" [class.active]="filtroActivo === 'bloqueos'" (click)="cambiarFiltro('bloqueos')">🚧 Bloqueos Frecuentes</button>
         <button class="btn-filter" [class.active]="filtroActivo === 'accidentes'" (click)="cambiarFiltro('accidentes')">⚠️ Zonas de Accidente</button>
+        <button class="btn-filter" [class.active]="filtroActivo === 'fatiga'" (click)="cambiarFiltro('fatiga')">😴 Zonas de Fatiga (IA)</button>
       </div>
     </div>
 

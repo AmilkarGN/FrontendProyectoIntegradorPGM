@@ -1,0 +1,78 @@
+<div class="page-container">
+  <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h1>Historial de <strong class="text-orange">Fatiga (IA)</strong></h1>
+      <p>Auditoría de eventos críticos detectados por el sistema de inteligencia artificial en cabina.</p>
+    </div>
+    <button class="btn-toggle" (click)="toggleVista()" [class.active]="viendoDescartadas">
+      <span class="material-symbols-rounded icon-xs">{{ viendoDescartadas ? 'visibility_off' : 'delete' }}</span>
+      {{ viendoDescartadas ? 'Ver Alertas Activas' : 'Ver Papelera (Descartadas)' }}
+    </button>
+  </div>
+
+  <!-- Estado de Carga -->
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando auditoría...</p>
+  </div>
+
+  <!-- Tabla de Resultados -->
+  <div class="table-card" *ngIf="!cargando">
+    <div class="table-responsive">
+      <table class="tk-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha y Hora</th>
+            <th>Conductor</th>
+            <th>Vehículo</th>
+            <th>Viaje Asignado</th>
+            <th>Nivel de Riesgo</th>
+            <th>Coordenadas GPS</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let alerta of alertas">
+            <td>#{{ alerta.id }}</td>
+            <td>
+              <div class="font-bold">{{ alerta.fecha_hora | date:'dd/MM/yyyy' }}</div>
+              <div class="text-sm text-gray">{{ alerta.fecha_hora | date:'HH:mm:ss' }}</div>
+            </td>
+            <td>
+              <div class="flex-align">
+                <span class="material-symbols-rounded icon-sm text-blue">badge</span>
+                <span>{{ alerta.conductor_nombre }} {{ alerta.conductor_apellido }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge-placa">{{ alerta.vehiculo_placa }}</span>
+            </td>
+            <td class="text-gray">{{ alerta.viaje_codigo }}</td>
+            <td>
+              <span class="badge-critico">
+                <span class="material-symbols-rounded icon-xs">warning</span>
+                {{ alerta.nivel_severidad }}
+              </span>
+            </td>
+            <td class="text-sm text-gray">
+              {{ alerta.latitud | number:'1.4-4' }}, {{ alerta.longitud | number:'1.4-4' }}
+            </td>
+            <td class="text-center">
+              <button *ngIf="!viendoDescartadas" class="btn-action btn-delete" (click)="eliminarAlerta(alerta.id)" title="Descartar Alerta">
+                <span class="material-symbols-rounded">delete</span>
+              </button>
+              <span *ngIf="viendoDescartadas" class="badge-placa" style="background-color: #3f3f46; color: #a1a1aa; border: none;">DESCARTADA</span>
+            </td>
+          </tr>
+          <tr *ngIf="alertas.length === 0">
+            <td colspan="8" class="text-center empty-state">
+              <span class="material-symbols-rounded icon-large">check_circle</span>
+              <p>No hay registros de fatiga. ¡Excelente trabajo de los conductores!</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

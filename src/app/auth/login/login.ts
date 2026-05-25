@@ -54,7 +54,11 @@ export class Login {
 
   verificarCodigo() {
     this.cargando = true; 
-    const datos = { username: this.username, codigo: this.codigo2FA };
+    const datos = { 
+      username: this.username, 
+      codigo: this.codigo2FA,
+      recordar: this.recordarDispositivo 
+    };
     
     console.log('🟡 1. Enviando código a Django...');
 

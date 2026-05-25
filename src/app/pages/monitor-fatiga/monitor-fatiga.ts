@@ -1,7 +1,8 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FatigaService, EstadoFatiga } from '../../services/fatiga';
+import { ViajeService } from '../../services/viaje';
 
 @Component({
   selector: 'app-monitor-fatiga',
@@ -10,7 +11,7 @@ import { FatigaService, EstadoFatiga } from '../../services/fatiga';
   templateUrl: './monitor-fatiga.html',
   styleUrls: ['./monitor-fatiga.css']
 })
-export class MonitorFatigaComponent implements OnDestroy {
+export class MonitorFatigaComponent implements OnInit, OnDestroy {
 
   streamUrl      = 'http://localhost:8000/api/fatiga/stream/';
   estado: EstadoFatiga | null = null;
@@ -21,11 +22,30 @@ export class MonitorFatigaComponent implements OnDestroy {
   streamUrlCache = '';
 
   private _timer: any = null;
+  private ultimaAlertaEnviada = 0; // Para no spammar el backend
 
-  constructor(private fatigaService: FatigaService, private http: HttpClient) {}
+  // Alarma sonora (se inicializa en OnInit para evitar problemas de SSR)
+  alarmaAudio: any = null;
+  estaSonandoAlarma = false;
+
+  constructor(
+    private fatigaService: FatigaService, 
+    private viajeService: ViajeService,
+    private http: HttpClient
+  ) {}
+
+  ngOnInit(): void {
+    if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+      // Usamos una alarma de reloj mecánico, que es mucho más escandalosa
+      this.alarmaAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+      this.alarmaAudio.loop = true; // Para que suene continuamente hasta que despierte
+      this.alarmaAudio.volume = 1.0; // Forzamos volumen al máximo en JS
+    }
+  }
 
   ngOnDestroy(): void {
     this._pararTimer();
+    this.detenerAlarma();
   }
 
   // ── El usuario presiona INICIAR ────────────────────────────────
@@ -49,6 +69,7 @@ export class MonitorFatigaComponent implements OnDestroy {
     this.activo = false;
     this.streamUrlCache = '';
     this._pararTimer();
+    this.detenerAlarma();
   }
 
   // ── El usuario presiona DETENER ────────────────────────────────
@@ -58,6 +79,15 @@ export class MonitorFatigaComponent implements OnDestroy {
     this.streamUrlCache = '';   // Oculta la imagen (la tag *ngIf queda en false)
     if (this.estado) this.estado.estado_alerta = 'INACTIVO';
     this._pararTimer();
+    this.detenerAlarma();
+  }
+  
+  private detenerAlarma(): void {
+    if (this.estaSonandoAlarma && this.alarmaAudio) {
+      this.alarmaAudio.pause();
+      this.alarmaAudio.currentTime = 0;
+      this.estaSonandoAlarma = false;
+    }
   }
 
   // ── Toggles de visualización ───────────────────────────────────
@@ -83,6 +113,33 @@ export class MonitorFatigaComponent implements OnDestroy {
     this.http.get<EstadoFatiga>('http://localhost:8000/api/fatiga/estado/').subscribe({
       next: (data) => {
         this.estado = data;
+        
+        // DISPARADOR VISUAL Y SONORO
+        if (data.estado_alerta === 'MICROSUEÑO' || data.estado_alerta === 'FATIGA ACUMULADA' || data.estado_alerta === 'MICROSUEÑO DETECTADO') {
+          if (!this.estaSonandoAlarma) {
+            this.estaSonandoAlarma = true;
+            if (this.alarmaAudio) this.alarmaAudio.play().catch((e: any) => console.log('Autoplay bloqueado', e));
+          }
+        } else {
+          if (this.estaSonandoAlarma) {
+            if (this.alarmaAudio) {
+              this.alarmaAudio.pause();
+              this.alarmaAudio.currentTime = 0;
+            }
+            this.estaSonandoAlarma = false;
+          }
+        }
+        
+        // REGISTRO EN BASE DE DATOS
+        if ((data.estado_alerta === 'MICROSUEÑO' || data.estado_alerta === 'FATIGA ACUMULADA' || data.estado_alerta === 'MICROSUEÑO DETECTADO')) {
+          // Evitamos spam: solo 1 registro cada 10 segundos como máximo
+          const ahora = Date.now();
+          if (ahora - this.ultimaAlertaEnviada > 10000) {
+            this.ultimaAlertaEnviada = ahora;
+            this.registrarAlerta(data.estado_alerta);
+          }
+        }
+
         // Si el backend nos dice que la cámara ya no corre, limpiar todo
         if (!data.activo) {
           this.activo = false;
@@ -91,6 +148,29 @@ export class MonitorFatigaComponent implements OnDestroy {
         }
       },
       error: () => { /* Backend no responde, dejar así */ }
+    });
+  }
+
+  private registrarAlerta(tipo: string): void {
+    // 1. Obtenemos el viaje "En Curso" (Simulamos que este monitor pertenece al conductor activo)
+    this.viajeService.obtenerDatosMapaVivo().subscribe(viajes => {
+      if (viajes && viajes.length > 0) {
+        const viajeActivo = viajes[0]; // Usamos el primer camión que encontremos
+        
+        const payload = {
+          viaje: viajeActivo.codigo_viaje,
+          nivel_severidad: 'Crítico', // Microsueño o Fatiga = Crítico
+          latitud: viajeActivo.latitud_actual || viajeActivo.latitud_origen, // Tomamos la última ubicación o el origen
+          longitud: viajeActivo.longitud_actual || viajeActivo.longitud_origen
+        };
+
+        this.http.post('http://localhost:8000/api/alertas-fatiga/', payload).subscribe({
+          next: () => console.log('✅ Alerta de fatiga registrada con éxito', payload),
+          error: (err) => console.error('❌ Error registrando alerta', err)
+        });
+      } else {
+        console.warn('⚠️ Alerta detectada pero no hay ningún Viaje "En Curso" para asignarle la alerta.');
+      }
     });
   }
 

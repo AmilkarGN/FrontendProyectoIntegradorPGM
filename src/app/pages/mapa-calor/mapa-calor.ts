@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, AfterViewInit, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { GoogleMapsModule, GoogleMap } from '@angular/google-maps';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-mapa-calor',
@@ -28,6 +29,7 @@ export class MapaCalor implements OnInit, AfterViewInit {
 
   constructor(
     private ngZone: NgZone,
+    private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -111,20 +113,33 @@ export class MapaCalor implements OnInit, AfterViewInit {
     if (this.heatmapLayer && typeof window !== 'undefined' && (window as any).google) {
       const g = (window as any).google.maps;
       
-      // Pedimos los datos solo de la región que estamos mirando y el filtro seleccionado
-      const datosNuevos = this.obtenerDatosDeBaseDeDatosFalsa(this.regionActiva, this.filtroActivo);
+      // Datos estáticos
+      const mockDatos = this.obtenerDatosDeBaseDeDatosFalsa(this.regionActiva, this.filtroActivo);
+      let puntosLatLng = mockDatos.map((p: any) => new g.LatLng(p.lat, p.lng));
       
-      const puntosLatLng = datosNuevos.map(
-        (p: any) => new g.LatLng(p.lat, p.lng)
-      );
-      
-      // En vez de borrar la capa, solo cambiamos la "data" (¡Mucho más rápido!)
-      this.heatmapLayer.setData(puntosLatLng);
+      // Si el filtro incluye fatiga, consultamos la API real
+      if (this.filtroActivo === 'todos' || this.filtroActivo === 'fatiga') {
+        this.http.get<any[]>('http://localhost:8000/api/alertas-fatiga/').subscribe({
+          next: (alertas) => {
+            const puntosFatiga = alertas
+              .filter(a => a.latitud && a.longitud) // Solo válidos
+              .map(a => new g.LatLng(parseFloat(a.latitud), parseFloat(a.longitud)));
+            
+            puntosLatLng = [...puntosLatLng, ...puntosFatiga];
+            this.heatmapLayer.setData(puntosLatLng);
+          },
+          error: () => this.heatmapLayer.setData(puntosLatLng) // fallback
+        });
+      } else {
+        // Solo datos estáticos
+        this.heatmapLayer.setData(puntosLatLng);
+      }
     }
   }
 
   // --- "BACKEND" FALSO: Simulador de llamadas a BD por región ---
   obtenerDatosDeBaseDeDatosFalsa(region: string, filtro: string) {
+    if (filtro === 'fatiga') return []; // Fatiga no tiene datos falsos, solo reales
     // 1. EL ALTO (Datos de detalle, muchos puntos muy juntos)
     const elAltoBloqueos = [
       {lat: -16.503, lng: -68.160}, {lat: -16.504, lng: -68.161}, {lat: -16.505, lng: -68.162},
@@ -155,8 +170,8 @@ export class MapaCalor implements OnInit, AfterViewInit {
       {lat: -18.000, lng: -63.500}  // Ruta a Samaipata
     ];
 
-    let bloqueos = [];
-    let accidentes = [];
+    let bloqueos: any[] = [];
+    let accidentes: any[] = [];
 
     // Filtramos por región primero
     if (region === 'el-alto') {

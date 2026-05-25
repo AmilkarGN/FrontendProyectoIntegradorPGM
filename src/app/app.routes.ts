@@ -25,6 +25,7 @@ import { RutasComponent } from './pages/rutas/rutas';
 import { ReservasComponent } from './pages/reservas/reservas';
 import { ViajesComponent } from './pages/viajes/viajes';
 import { MonitorFatigaComponent } from './pages/monitor-fatiga/monitor-fatiga'; 
+import { AdminFatigaComponent } from './pages/admin-fatiga/admin-fatiga';
 
 export const routes: Routes = [
   // 🚀 CAMBIO PRINCIPAL: La ruta vacía ahora muestra la Landing
@@ -56,7 +57,8 @@ export const routes: Routes = [
       {path: 'rutas', component: RutasComponent},
       {path: 'reservas', component: ReservasComponent},
       {path: 'viajes', component: ViajesComponent},
-      {path: 'monitor-fatiga', component: MonitorFatigaComponent}
+      {path: 'monitor-fatiga', component: MonitorFatigaComponent},
+      {path: 'admin-fatiga', component: AdminFatigaComponent}
     ]
   },
   // Si alguien escribe una URL que no existe, lo mandamos al inicio (Landing)
