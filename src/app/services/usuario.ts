@@ -17,6 +17,8 @@ export interface Usuario {
   rol_id?: number;       
   rol_detalles?: Rol; // <-- 2. AHORA USA LA INTERFAZ OFICIAL (que ya tiene nombre_rol)
   is_active?: boolean;
+  fecha_eliminacion?: string;
+  eliminado_por_nombre?: string;
 }
 
 @Injectable({
@@ -27,8 +29,9 @@ export class UsuarioService {
 
   constructor(private http: HttpClient) { }
 
-  obtenerUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl);
+  obtenerUsuarios(eliminados: boolean = false): Observable<Usuario[]> {
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Usuario[]>(url);
   }
 
   crearUsuario(usuarioData: any): Observable<any> {
@@ -41,5 +44,9 @@ export class UsuarioService {
 
   eliminarUsuario(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}${id}/`);
+  }
+
+  restaurarUsuario(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}${id}/restaurar/`, {});
   }
 }

@@ -1,10 +1,16 @@
 <div class="crud-container fade-in">
   <div class="crud-header">
-    <h2>Gestión de Personal Logístico</h2>
-    <button class="btn-action btn-add" (click)="abrirModalCrear()">
-      <i class="fas fa-plus"></i> + Nuevo Usuario
-    </button>
+    <h2>Gestión de Usuarios</h2>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Usuario</button>
+    </div>
   </div>
+
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)"
+    (togglePapelera)="alternarPapelera($event)">
+  </app-query-builder>
 
   <div *ngIf="cargando" style="text-align: center; padding: 50px;">
     <p style="color: #007bff; font-weight: 600;">Cargando nómina...</p>
@@ -14,25 +20,26 @@
     <thead>
       <tr>
         <th>Foto</th>
-        <th>Username / CI</th>
         <th>Nombre Completo</th>
         <th>Contacto</th>
-        <th>Rol</th>
+        <th>Rol Asignado</th>
+        <th>Estado</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let usuario of usuarios">
+      <tr *ngFor="let usuario of filtrados">
         <td>
         <img [src]="obtenerImagenUrl(usuario.foto_perfil)" class="avatar-img" alt="Foto">
         </td>
         <td>
           <strong>{{ usuario.username }}</strong><br>
-          <small style="color: #64748b;">CI: {{ usuario.ci }}</small>
+          <small style="color: #64748b;">CI: {{ usuario.ci }}</small><br>
+          {{ usuario.nombre }} {{ usuario.apellido_paterno }}
         </td>
-        <td>{{ usuario.nombre }} {{ usuario.apellido_paterno }}</td>
         <td>
-          <small>📱 {{ usuario.celular }}</small>
+          <small>📱 {{ usuario.celular }}</small><br>
+          <small>📧 {{ usuario.email }}</small>
         </td>
         <td>
           <span class="badge" [ngClass]="{
@@ -44,11 +51,30 @@
             {{ usuario.rol_detalles?.nombre_rol || 'Sin Rol' }}
           </span>
         </td>
+        <td>
+          <span [style.color]="usuario.is_active ? '#10b981' : '#ef4444'">
+            {{ usuario.is_active ? '✅ Activo' : '❌ Inactivo' }}
+          </span>
+        </td>
         <td class="actions-column">
-          <button class="btn-action btn-view" (click)="verUsuario(usuario)" title="Ver Detalles">👁️</button>
+          <button class="btn-action btn-view" (click)="verUsuario(usuario)" title="Ver Detalles">👁️ Ver</button>
           
-          <button class="btn-action btn-edit" (click)="editarUsuario(usuario)" title="Editar">✏️</button>
-          <button class="btn-action btn-delete" (click)="eliminarUsuario(usuario.id)" title="Eliminar">🗑️</button>
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-edit" (click)="editarUsuario(usuario)" title="Editar">
+              <i class="fas fa-pen"></i> ✏️ Editar
+            </button>
+            <button class="btn-action btn-delete" (click)="eliminarUsuario(usuario.id)" title="Eliminar">
+              <i class="fas fa-trash"></i> 🗑️ Eliminar
+            </button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" (click)="restaurarUsuario(usuario.id)" title="Restaurar" style="color: #10b981; background: #d1fae5;">
+              ♻️ Restaurar
+            </button>
+            <button class="btn-action" (click)="verAuditoria(usuario)" title="Ver Auditoría" style="color: #6366f1; background: #e0e7ff;">
+              👁️ Info
+            </button>
+          </ng-container>
         </td>
       </tr>
     </tbody>

@@ -1,14 +1,17 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, NgZone, Inject, PLATFORM_ID, OnInit } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+// No query builder imports
+
 @Component({
   selector: 'app-visor-carga',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './visor-carga.html',
   styleUrls: ['./visor-carga.css']
 })
@@ -40,6 +43,16 @@ export class VisorCarga implements OnInit, AfterViewInit, OnDestroy {
     private http: HttpClient
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+  }
+
+  terminoBusqueda: string = '';
+
+  get flotaFiltrada(): any[] {
+    if (!this.terminoBusqueda) return this.listaFlota;
+    const term = this.terminoBusqueda.toLowerCase();
+    return this.listaFlota.filter(v => 
+      `${v.placa} ${v.conductor} ${v.estado} ${v.tipo}`.toLowerCase().includes(term)
+    );
   }
 
   ngOnInit(): void {

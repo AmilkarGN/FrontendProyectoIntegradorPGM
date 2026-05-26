@@ -1,19 +1,22 @@
 <div class="crud-container fade-in">
   <div class="crud-header">
     <h2>⚙️ Configuración de Flota y Asignaciones</h2>
+    <div class="search-box">
+      <input type="text" [(ngModel)]="terminoBusqueda" placeholder="🔍 Buscar en la lista...">
+    </div>
   </div>
 
   <div class="tabs-container">
-    <button [ngClass]="tabActiva === 'modelos' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'modelos'">
+    <button [ngClass]="tabActiva === 'modelos' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'modelos'; terminoBusqueda=''">
       🏗️ Modelos
     </button>
-    <button [ngClass]="tabActiva === 'tipos' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'tipos'">
+    <button [ngClass]="tabActiva === 'tipos' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'tipos'; terminoBusqueda=''">
       🚛 Tipos
     </button>
-    <button [ngClass]="tabActiva === 'estados' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'estados'">
+    <button [ngClass]="tabActiva === 'estados' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'estados'; terminoBusqueda=''">
       🚥 Estados
     </button>
-    <button [ngClass]="tabActiva === 'asignaciones' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'asignaciones'">
+    <button [ngClass]="tabActiva === 'asignaciones' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'asignaciones'; terminoBusqueda=''">
       🔗 Asignaciones
     </button>
   </div>
@@ -33,17 +36,17 @@
       </thead>
       <tbody>
         <ng-container *ngIf="tabActiva === 'modelos'">
-          <tr *ngFor="let m of modelos">
+          <tr *ngFor="let m of filtrados">
             <td>{{ m.marca }}</td><td><strong>{{ m.nombre_modelo }}</strong></td><td>{{ m.anio }}</td>
             <td class="actions-column">
-              <button class="btn-action btn-edit" (click)="abrirModal(m)">✏️</button>
-              <button class="btn-action btn-delete" (click)="eliminar(m.id)">🗑️</button>
+              <button class="btn-action btn-edit" (click)="abrirModal(m)">✏️ Editar</button>
+              <button class="btn-action btn-delete" (click)="eliminar(m.id)">🗑️ Eliminar</button>
             </td>
           </tr>
         </ng-container>
 
         <ng-container *ngIf="tabActiva === 'tipos'">
-          <tr *ngFor="let t of tipos">
+          <tr *ngFor="let t of filtrados">
             <td><strong>{{ t.nombre }}</strong></td>
             <td>{{ t.capacidad_carga_kg }} Kg</td>
             <td>
@@ -52,18 +55,18 @@
               </span>
             </td>
             <td class="actions-column">
-              <button class="btn-action btn-edit" (click)="abrirModal(t)">✏️</button>
-              <button class="btn-action btn-delete" (click)="eliminar(t.id)">🗑️</button>
+              <button class="btn-action btn-edit" (click)="abrirModal(t)">✏️ Editar</button>
+              <button class="btn-action btn-delete" (click)="eliminar(t.id)">🗑️ Eliminar</button>
             </td>
           </tr>
         </ng-container>
 
         <ng-container *ngIf="tabActiva === 'estados'">
-          <tr *ngFor="let e of estados">
+          <tr *ngFor="let e of filtrados">
             <td>#{{ e.id }}</td><td><strong>{{ e.nombre }}</strong></td>
             <td class="actions-column">
-              <button class="btn-action btn-edit" (click)="abrirModal(e)">✏️</button>
-              <button class="btn-action btn-delete" (click)="eliminar(e.id)">🗑️</button>
+              <button class="btn-action btn-edit" (click)="abrirModal(e)">✏️ Editar</button>
+              <button class="btn-action btn-delete" (click)="eliminar(e.id)">🗑️ Eliminar</button>
             </td>
           </tr>
         </ng-container>
@@ -160,17 +163,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let asig of asignacionesActivas">
-              <td><strong>{{ asig.conductor_nombre }}</strong></td>
+            <tr *ngFor="let a of filtrados">
+              <td><strong>{{ a.conductor_nombre }}</strong></td>
               <td>
-                <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 6px;">{{ asig.vehiculo }}</span>
-                <br><small style="color: #64748b;">{{ asig.vehiculo_info }}</small>
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 6px;">{{ a.vehiculo }}</span>
+                <br><small style="color: #64748b;">{{ a.vehiculo_info }}</small>
               </td>
-              <td>{{ asig.fecha_asignacion | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ a.fecha_asignacion | date:'dd/MM/yyyy HH:mm' }}</td>
               <td><span class="badge" style="background: #dcfce7; color: #15803d;">Activo</span></td>
               <td class="actions-column">
-                <button type="button" class="btn-cancel" (click)="desvincular(asig.id)" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">
-                  Desvincular
+                <button type="button" class="btn-cancel" (click)="desvincular(a.id)" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">
+                  Liberar Unidad
                 </button>
               </td>
             </tr>

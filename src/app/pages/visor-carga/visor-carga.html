@@ -7,14 +7,21 @@
   </div>
 
   <!-- 🚚 PANEL IZQUIERDO: LISTA DE FLOTA -->
-  <div class="fleet-sidebar fade-in-left">
+  <div class="fleet-sidebar fade-in-left" style="overflow-y: auto;">
     <h3 style="margin-top: 0; color: white;">Terminal de Despacho</h3>
-    <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 20px;">Selecciona una unidad para inspeccionar.</p>
+    <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 10px;">Selecciona una unidad para inspeccionar.</p>
     
+    <!-- Buscador sencillo -->
+    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+      <span class="material-symbols-rounded" style="color: #94a3b8;">search</span>
+      <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Buscar placa, conductor..." 
+             style="background: transparent; border: none; color: white; width: 100%; outline: none;">
+    </div>
+
     <div class="fleet-list">
       <!-- Bucle por cada camión -->
       <div class="fleet-item" 
-           *ngFor="let vehiculo of listaFlota" 
+           *ngFor="let vehiculo of flotaFiltrada" 
            [class.active]="vehiculoSeleccionado?.id === vehiculo.id"
            (click)="seleccionarUnidad(vehiculo)">
         

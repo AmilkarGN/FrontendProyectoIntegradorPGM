@@ -1,7 +1,18 @@
 <div class="crud-container fade-in">
-  <div class="crud-header">
-    <h2>Asignación de Viajes y Reservas</h2>
-    <button class="btn-action btn-add" (click)="abrirModal()">+ Nueva Reserva</button>
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
+    <h2>Reservas (Control de Cargas)</h2>
+    <button class="btn-action btn-add" (click)="abrirModal()">+ Crear Reserva</button>
+  </div>
+
+  <!-- FILTROS AVANZADOS (QUERY BUILDER) -->
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)">
+  </app-query-builder>
+
+  <!-- Contador de resultados -->
+  <div style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: #475569;">
+    Mostrando {{ filtrados.length }} reserva(s) que coinciden con los filtros.
   </div>
 
   <table class="crud-table">
@@ -17,7 +28,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let r of reservas">
+      <tr *ngFor="let r of filtrados">
         <td><strong>{{ r.codigo_reserva }}</strong></td>
         <td>{{ r.cliente_detalles?.razon_social || r.cliente_detalles?.usuario_detalles?.nombre }}</td>
         <td>
@@ -30,100 +41,153 @@
         <td><span class="badge">{{ r.estado_nombre }}</span></td>
         <td class="actions-column">
 
-          <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️</button>
-          <button class="btn-action btn-edit" (click)="editarReserva(r)" title="Editar Reserva">✏️</button> 
-          <button class="btn-action btn-delete" (click)="eliminarReserva(r)" title="Eliminar Reserva">🗑️</button>
+          <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️ Ver</button>
+          <button class="btn-action btn-edit" (click)="editarReserva(r)" title="Editar Reserva">✏️ Editar</button> 
+          <button class="btn-action btn-delete" (click)="eliminarReserva(r)" title="Eliminar Reserva">🗑️ Eliminar</button>
           
         </td>
       </tr>
     </tbody>
   </table>
 
-  <div class="crud-modal-overlay" *ngIf="mostrarModal">
-    <div class="crud-modal" style="max-width: 950px;">
-      <h3>{{ modoModal === 'ver' ? 'Detalles de la Reserva' : 'Planificación de Ruta y Reserva' }}</h3>
+  <div class="crud-modal-overlay" *ngIf="mostrarModal && modoModal === 'crear'">
+    <div class="crud-modal slide-in-bottom modal-lg" style="max-width: 1000px;">
+      <div class="modal-header">
+        <h3>📍 Planificación de Ruta y Reserva</h3>
+      </div>
       
-      <div class="reserva-grid">
-        <form (ngSubmit)="reservaForm.invalid ? reservaForm.control.markAllAsTouched() : guardar()" class="form-scroll" #reservaForm="ngForm">
-          
-          <div class="form-group">
-            <label>Cliente Solicitante *</label>
-            <select name="cliente" [(ngModel)]="reservaActual.cliente" [disabled]="modoModal === 'ver'" required>
-              <option *ngFor="let c of clientes" [value]="c.id">
-                {{ c.razon_social || c.usuario_detalles?.nombre }}
-              </option>
-            </select>
-                      <small *ngIf="reservaForm.controls['cliente']?.invalid && reservaForm.controls['cliente']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Fecha Solicitada de Viaje *</label>
-            <input type="date" name="fecha" [(ngModel)]="reservaActual.fecha_tentativa_viaje" [min]="fechaMinima" [disabled]="modoModal === 'ver'" required>
-                      <small *ngIf="reservaForm.controls['fecha']?.invalid && reservaForm.controls['fecha']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div style="background: #fffbeb; border-left: 4px solid #fbbf24; padding: 8px; margin-bottom: 15px; font-size: 0.85rem; color: #92400e;" *ngIf="modoModal === 'crear'">
-            💡 <strong>Tip:</strong> Puedes hacer clic en el mapa (1º clic Origen, 2º clic Destino).
-          </div>
-
-          <div class="form-group">
-            <label>Punto de Recojo (Origen) *</label>
-            <input id="origenInput" type="text" name="origen" [(ngModel)]="reservaActual.direccion_origen" placeholder="Busca o haz clic..." [disabled]="modoModal === 'ver'" required>
-                      <small *ngIf="reservaForm.controls['origen']?.invalid && reservaForm.controls['origen']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Punto de Entrega (Destino) *</label>
-            <input id="destinoInput" type="text" name="destino" [(ngModel)]="reservaActual.direccion_destino" placeholder="Busca o haz clic..." [disabled]="modoModal === 'ver'" required>
-                      <small *ngIf="reservaForm.controls['destino']?.invalid && reservaForm.controls['destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-row">
+      <div class="grid-detalles-mapa">
+        <div class="col-datos form-scroll" style="max-height: 60vh; overflow-y: auto; padding-right: 15px;">
+          <form (ngSubmit)="reservaForm.invalid ? reservaForm.control.markAllAsTouched() : guardar()" #reservaForm="ngForm">
+            
             <div class="form-group">
-              <label>Peso (Kg)</label>
-              <input type="number" name="peso" [(ngModel)]="reservaActual.peso_estimado_kg" [disabled]="modoModal === 'ver'" min="0.1" required>
-                        <small *ngIf="reservaForm.controls['peso']?.invalid && reservaForm.controls['peso']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
+              <label>Cliente Solicitante *</label>
+              <select name="cliente" [(ngModel)]="reservaActual.cliente" required>
+                <option *ngFor="let c of clientes" [value]="c.id">
+                  {{ c.razon_social || c.usuario_detalles?.nombre }}
+                </option>
+              </select>
+            </div>
+
             <div class="form-group">
-              <label style="margin-top: 10px;">
-                <input type="checkbox" name="fragil" [(ngModel)]="reservaActual.es_fragil" [disabled]="modoModal === 'ver'"> Es Carga Frágil
-              </label>
+              <label>Fecha Solicitada de Viaje *</label>
+              <input type="date" name="fecha" [(ngModel)]="reservaActual.fecha_tentativa_viaje" [min]="fechaMinima" required>
+            </div>
+
+            <div style="background: #fffbeb; border-left: 4px solid #fbbf24; padding: 8px; margin-bottom: 15px; font-size: 0.85rem; color: #92400e;">
+              💡 <strong>Tip:</strong> Puedes hacer clic en el mapa (1º clic Origen, 2º clic Destino).
+            </div>
+
+            <div class="form-group">
+              <label>Punto de Recojo (Origen) *</label>
+              <input id="origenInput" type="text" name="origen" [(ngModel)]="reservaActual.direccion_origen" placeholder="Busca o haz clic..." required>
+            </div>
+
+            <div class="form-group">
+              <label>Punto de Entrega (Destino) *</label>
+              <input id="destinoInput" type="text" name="destino" [(ngModel)]="reservaActual.direccion_destino" placeholder="Busca o haz clic..." required>
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 15px;">
+              <div class="form-group" style="flex: 1;">
+                <label>Peso (Kg)</label>
+                <input type="number" name="peso" [(ngModel)]="reservaActual.peso_estimado_kg" min="0.1" required>
+              </div>
+              <div class="form-group" style="flex: 1; display: flex; align-items: center; margin-top: 25px;">
+                <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" name="fragil" [(ngModel)]="reservaActual.es_fragil"> Es Carga Frágil
+                </label>
+              </div>
+            </div>
+
+            <h5 style="margin-top: 15px; margin-bottom: 10px; color: #4f46e5; border-bottom: 1px solid #e0e7ff; padding-bottom: 5px;">Datos de Entrega</h5>
+            <div class="form-row" style="display: flex; gap: 15px;">
+              <div class="form-group" style="flex: 1;">
+                <label>Persona que recibe *</label>
+                <input type="text" name="contacto_destino" [(ngModel)]="reservaActual.contacto_destino" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Teléfono Destino *</label>
+                <input type="text" name="telefono_destino" [(ngModel)]="reservaActual.telefono_destino" pattern="[0-9]+" required>
+              </div>
+            </div>
+
+            <div class="resumen-viaje" *ngIf="reservaActual.distancia_real_km" style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #bae6fd;">
+              <h4 style="margin: 0 0 10px 0; color: #0284c7;">Análisis Logístico (Carga Pesada)</h4>
+              <p style="margin: 5px 0;">🛣️ Distancia Total: <strong>{{ reservaActual.distancia_real_km }} km</strong></p>
+              <p style="margin: 5px 0;">⏱️ Duración Estimada: <strong>{{ reservaActual.tiempo_estimado_horas }} Horas</strong></p>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 25px;">
+              <button type="button" class="btn-cancel" (click)="mostrarModal = false">Cancelar</button>
+              <button type="submit" class="btn-save">Guardar Reserva</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-mapa" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
+            <button type="button" class="btn-cancel" style="padding: 6px 12px; font-size: 0.9rem; background: white; border: 1px solid #e2e8f0; color: #475569; font-weight: 600; cursor: pointer; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 0;" (click)="limpiarMapa()" title="Limpiar Puntos">
+              🧹 Limpiar
+            </button>
+            <button type="button" class="btn-gps" (click)="ubicarUsuario($event)" title="Mi ubicación actual" style="position: static; margin: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+              <span class="icon-gps" style="font-size: 1.1rem;">🎯</span>
+            </button>
+          </div>
+          <div #mapContainer id="map" style="width: 100%; height: 100%; min-height: 450px; border-radius: 8px; border: 1px solid #cbd5e1; background: #e2e8f0;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarModal && modoModal === 'ver'">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header flex-between">
+        <h3>📍 Detalles de la Reserva: <span class="text-primary">{{ reservaActual.codigo_reserva }}</span></h3>
+        <span class="badge badge-success">{{ reservaActual.estado_nombre || 'Registrada' }}</span>
+      </div>
+      
+      <div class="grid-detalles-mapa">
+        <div class="col-datos">
+          <div class="card-detalle">
+            <p class="card-subtitle">CLIENTE</p>
+            <h4 class="card-title">👤 {{ reservaActual.cliente_detalles?.razon_social || reservaActual.cliente_detalles?.usuario_detalles?.nombre }}</h4>
+            <span class="badge" [ngClass]="reservaActual.es_fragil ? 'badge-danger' : 'badge-primary'" style="background: #e0f2fe; color: #0369a1; display: inline-block; margin-top: 5px;">
+              {{ reservaActual.es_fragil ? '⚠️ Carga Frágil' : '📦 Carga Normal' }}
+            </span>
+          </div>
+
+          <div class="card-detalle">
+            <p class="card-subtitle">CRONOGRAMA Y CARGA</p>
+            <div class="crono-item">
+              <strong class="text-success">📅 Solicitado:</strong> {{ reservaActual.fecha_tentativa_viaje | date:'shortDate' }}
+            </div>
+            <div class="crono-item">
+              <strong class="text-primary">⚖️ Peso:</strong> {{ reservaActual.peso_estimado_kg }} Kg
             </div>
           </div>
 
-          <h5 style="margin-top: 15px; color: #4f46e5; border-bottom: 1px solid #e0e7ff;">Datos de Entrega</h5>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Persona que recibe *</label>
-              <input type="text" name="contacto_destino" [(ngModel)]="reservaActual.contacto_destino" [disabled]="modoModal === 'ver'" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" required>
-                        <small *ngIf="reservaForm.controls['contacto_destino']?.invalid && reservaForm.controls['contacto_destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          <div class="card-detalle">
+            <p class="card-subtitle">RUTA Y DISTANCIA</p>
+            <div class="crono-item"><strong>A:</strong> {{ reservaActual.direccion_origen }}</div>
+            <div class="crono-item"><strong>B:</strong> {{ reservaActual.direccion_destino }}</div>
+            <div style="margin-top: 10px; font-weight: bold; color: #0284c7; background: #f0f9ff; padding: 5px 10px; border-radius: 5px; display: inline-block;">
+              🛣️ Total: {{ reservaActual.distancia_real_km }} km
+            </div>
           </div>
-            <div class="form-group">
-              <label>Teléfono Destino *</label>
-              <input type="text" name="telefono_destino" [(ngModel)]="reservaActual.telefono_destino" [disabled]="modoModal === 'ver'" pattern="[0-9]+" required>
-                        <small *ngIf="reservaForm.controls['telefono_destino']?.invalid && reservaForm.controls['telefono_destino']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-          </div>
-
-          <div class="resumen-viaje" *ngIf="reservaActual.distancia_real_km">
-            <h4 style="margin: 0 0 10px 0; color: #0284c7; border-bottom: 1px solid #bae6fd;">Análisis Logístico (Carga Pesada)</h4>
-            <p>🛣️ Distancia Total: <strong>{{ reservaActual.distancia_real_km }} km</strong></p>
-            <p>⏱️ Duración Estimada: <strong>{{ reservaActual.tiempo_estimado_horas }} Horas</strong></p>
-          </div>
-
-          <div class="modal-actions" style="margin-top: 20px;">
-            <button type="button" class="btn-cancel" (click)="mostrarModal = false">{{ modoModal === 'ver' ? 'Cerrar Detalles' : 'Cancelar' }}</button>
-            <button type="submit" class="btn-save" *ngIf="modoModal === 'crear'" >Guardar Reserva</button>
-          </div>
-        </form>
-
-        <div class="map-wrapper" style="position: relative;">
-          <button type="button" class="btn-gps" (click)="ubicarUsuario($event)" title="Mi ubicación actual" *ngIf="modoModal === 'crear'">
-            <span class="icon-gps">🎯</span>
-          </button>
-          <div #mapContainer id="map" style="cursor: crosshair; width: 100%; height: 100%;"></div>
         </div>
 
+        <div class="col-mapa" style="min-height: 400px; display: flex; flex-direction: column;">
+          <div #mapContainer id="map" style="flex: 1; width: 100%; border-radius: 8px;"></div>
+          <div class="nota-info" style="margin-top: 10px;">
+             <small><strong>Nota:</strong> Ruta optimizada calculada en base al origen y destino de la carga.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-cancel w-100" (click)="mostrarModal = false">Cerrar Detalles</button>
       </div>
     </div>
   </div>

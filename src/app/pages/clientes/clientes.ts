@@ -3,12 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { UsuarioService, Usuario } from '../../services/usuario';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './clientes.html',
   styleUrls: ['./clientes.css']
 })
@@ -23,10 +26,13 @@ export class ClientesComponent implements OnInit {
   
   clienteActual: Cliente | any = {}; 
   baseMediaUrl = 'http://localhost:8000';
+  
+  kpiClientes: any = null;
 
   constructor(
     private clienteService: ClienteService,
-    private usuarioService: UsuarioService
+    private usuarioService: UsuarioService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -42,6 +48,11 @@ export class ClientesComponent implements OnInit {
         this.cargarClientes();
       },
       error: (err) => { console.error('Error usuarios:', err); this.cargando = false; }
+    });
+    
+    // Cargar KPIs
+    this.http.get('http://localhost:8000/api/estadisticas/clientes/').subscribe(data => {
+      this.kpiClientes = data;
     });
   }
 
@@ -63,6 +74,26 @@ export class ClientesComponent implements OnInit {
       const yaTienePerfil = this.clientes.some(cliente => cliente.usuario === user.id);
       return tieneRolCorrecto && !yaTienePerfil;
     });
+  }
+
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'razon_social', nombre: 'Razón Social', tipo: 'texto' },
+    { campo: 'nit', nombre: 'NIT / Documento', tipo: 'texto' },
+    { campo: 'tipo_cliente', nombre: 'Tipo Cliente', tipo: 'texto' },
+    { campo: 'usuario_detalles.nombre', nombre: 'Nombre de Usuario Físico', tipo: 'texto' },
+    { campo: 'contacto_principal', nombre: 'Contacto', tipo: 'texto' },
+    { campo: 'telefono_principal', nombre: 'Teléfono', tipo: 'texto' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): Cliente[] {
+    return this.clientes.filter(c => evaluarFiltrosDinámicos(c, this.reglasActivas));
   }
 
   abrirModalCrear(): void {

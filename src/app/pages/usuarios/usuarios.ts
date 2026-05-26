@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { UsuarioService, Usuario } from '../../services/usuario';
 import { RolService, Rol } from '../../services/rol';
 import Swal from 'sweetalert2';
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './usuarios.html',
   styleUrls: ['./usuarios.css']
 })
@@ -17,6 +18,7 @@ export class UsuariosComponent implements OnInit {
   roles: Rol[] = [];
   cargando: boolean = true;
   baseMediaUrl: string = 'http://localhost:8000';
+  viendoPapelera: boolean = false;
   // Control del modal
   mostrarModal: boolean = false;
   modoModal: 'crear' | 'editar' | 'ver' = 'crear'; // <-- Nuevo control de estados
@@ -47,7 +49,7 @@ export class UsuariosComponent implements OnInit {
 
   cargarUsuarios(): void {
     this.cargando = true;
-    this.usuarioService.obtenerUsuarios().subscribe({
+    this.usuarioService.obtenerUsuarios(this.viendoPapelera).subscribe({
       next: (data) => { this.usuarios = data; this.cargando = false; },
       error: (err) => { console.error('Error:', err); this.cargando = false; }
     });
@@ -55,6 +57,31 @@ export class UsuariosComponent implements OnInit {
 
   cargarRoles(): void {
     this.rolService.obtenerRoles().subscribe(data => this.roles = data);
+  }
+
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'username', nombre: 'Username', tipo: 'texto' },
+    { campo: 'nombre', nombre: 'Nombre', tipo: 'texto' },
+    { campo: 'apellido_paterno', nombre: 'Apellido', tipo: 'texto' },
+    { campo: 'ci', nombre: 'CI', tipo: 'texto' },
+    { campo: 'rol_detalles.nombre_rol', nombre: 'Rol', tipo: 'texto' },
+    { campo: 'is_active', nombre: 'Cuenta Activa', tipo: 'booleano' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): Usuario[] {
+    return this.usuarios.filter(u => evaluarFiltrosDinámicos(u, this.reglasActivas));
+  }
+
+  alternarPapelera(estado: boolean) {
+    this.viendoPapelera = estado;
+    this.cargarUsuarios();
   }
 
   // --- CONTROL DEL MODAL ---
@@ -142,7 +169,7 @@ export class UsuariosComponent implements OnInit {
     if (id) {
       Swal.fire({
         title: '¿Eliminar Usuario?',
-        text: 'Esta acción no se puede deshacer.',
+        text: 'El usuario será movido a la papelera.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -154,12 +181,55 @@ export class UsuariosComponent implements OnInit {
           this.usuarioService.eliminarUsuario(id).subscribe({
             next: () => { 
               this.usuarios = this.usuarios.filter(u => u.id !== id); 
-              Swal.fire('¡Eliminado!', 'El usuario ha sido eliminado del sistema.', 'success');
+              Swal.fire('¡Eliminado!', 'El usuario ha sido movido a la papelera.', 'success');
             },
             error: (err) => Swal.fire('Error', 'No se pudo eliminar el usuario.', 'error')
           });
         }
       });
     }
+  }
+
+  restaurarUsuario(id: number | undefined): void {
+    if (id) {
+      Swal.fire({
+        title: '¿Restaurar Usuario?',
+        text: '¿Deseas restaurar este usuario de la papelera?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, restaurar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.usuarioService.restaurarUsuario(id).subscribe({
+            next: () => {
+              this.cargarUsuarios();
+              Swal.fire('Restaurado', 'El usuario ha sido restaurado exitosamente.', 'success');
+            },
+            error: () => Swal.fire('Error', 'No se pudo restaurar el usuario.', 'error')
+          });
+        }
+      });
+    }
+  }
+
+  verAuditoria(item: any): void {
+    const fecha = item.fecha_eliminacion ? new Date(item.fecha_eliminacion).toLocaleString() : 'Desconocida';
+    const autor = item.eliminado_por_nombre || 'Desconocido';
+    
+    Swal.fire({
+      title: 'Información de Eliminación',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p><strong>🕒 Fecha y Hora:</strong> ${fecha}</p>
+          <p><strong>👤 Eliminado por:</strong> ${autor}</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonColor: '#3b82f6',
+      confirmButtonText: 'Cerrar'
+    });
   }
 }

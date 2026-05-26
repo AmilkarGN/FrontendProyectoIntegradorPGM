@@ -17,6 +17,7 @@ export class CiudadesComponent implements OnInit {
   ciudades: Ciudad[] = [];
   cargando: boolean = true;
   mostrarFormulario: boolean = false;
+  viendoPapelera: boolean = false;
   
   ciudadActual: Ciudad = { nombre: '', region_estado: '', pais: 'Bolivia' };
 
@@ -32,7 +33,7 @@ export class CiudadesComponent implements OnInit {
 
   cargarCiudades(): void {
     this.cargando = true;
-    this.ciudadService.obtenerCiudades().subscribe({
+    this.ciudadService.obtenerCiudades(this.viendoPapelera).subscribe({
       next: (data) => {
         this.ciudades = data;
         this.cargando = false;
@@ -45,6 +46,22 @@ export class CiudadesComponent implements OnInit {
   }
 
   // --- GOOGLE MAPS AUTOCOMPLETADO ---
+
+  terminoBusqueda: string = '';
+
+  get filtrados(): Ciudad[] {
+    if (!this.terminoBusqueda) return this.ciudades;
+    const term = this.terminoBusqueda.toLowerCase();
+    return this.ciudades.filter(c => {
+      const searchStr = `${c.nombre} ${c.region_estado} ${c.pais}`.toLowerCase();
+      return searchStr.includes(term);
+    });
+  }
+
+  alternarPapelera(): void {
+    this.viendoPapelera = !this.viendoPapelera;
+    this.cargarCiudades();
+  }
   iniciarGoogleAutocomplete(): void {
     setTimeout(() => {
       const inputElement = document.getElementById('inputCiudad') as HTMLInputElement;
@@ -139,7 +156,7 @@ export class CiudadesComponent implements OnInit {
           this.ciudadService.eliminarCiudad(id).subscribe({
             next: () => { 
               this.ciudades = this.ciudades.filter(c => c.id !== id); 
-              Swal.fire('¡Eliminado!', 'La ciudad ha sido eliminada.', 'success');
+              Swal.fire('¡Eliminado!', 'La ciudad ha sido enviada a la papelera.', 'success');
             },
             error: (err) => {
               console.error('Error al eliminar:', err);
@@ -149,5 +166,47 @@ export class CiudadesComponent implements OnInit {
         }
       });
     }
+  }
+
+  restaurarCiudad(id: number | undefined): void {
+    if (!id) return;
+    Swal.fire({
+      title: '¿Restaurar Ciudad?',
+      text: '¿Deseas restaurar esta locación de la papelera?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.ciudadService.restaurarCiudad(id).subscribe({
+          next: () => {
+            this.cargarCiudades();
+            Swal.fire('Restaurada', 'La ciudad ha sido restaurada.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar la ciudad.', 'error')
+        });
+      }
+    });
+  }
+
+  verAuditoria(item: any): void {
+    const fecha = item.fecha_eliminacion ? new Date(item.fecha_eliminacion).toLocaleString() : 'Desconocida';
+    const autor = item.eliminado_por_nombre || 'Desconocido';
+    
+    Swal.fire({
+      title: 'Información de Eliminación',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p><strong>🕒 Fecha y Hora:</strong> ${fecha}</p>
+          <p><strong>👤 Eliminado por:</strong> ${autor}</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonColor: '#3b82f6',
+      confirmButtonText: 'Cerrar'
+    });
   }
 }

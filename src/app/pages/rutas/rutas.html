@@ -1,21 +1,32 @@
 <div class="crud-container fade-in">
-  <div class="crud-header">
-    <h2>Catálogo de Rutas Principales (Macro)</h2>
-    <button class="btn-action btn-add" (click)="abrirModal()">+ Definir Nueva Ruta</button>
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
+    <h2>Rutas y Tramos Definidos</h2>
+    <button class="btn-action btn-add" (click)="abrirModal()">+ Trazar Ruta</button>
+  </div>
+
+  <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)">
+  </app-query-builder>
+
+  <!-- Contador de resultados -->
+  <div style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: #475569;">
+    Mostrando {{ filtrados.length }} ruta(s) que coinciden con los filtros.
   </div>
 
   <table class="crud-table">
     <thead>
       <tr>
         <th>Nombre de la Ruta</th>
-        <th>Origen</th>
-        <th>Destino</th>
+        <th>Origen (Almacén A)</th>
+        <th>Destino (Almacén B)</th>
         <th>Distancia Oficial</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let r of rutas">
+      <tr *ngFor="let r of filtrados">
         <td><strong>{{ r.nombre_ruta }}</strong></td>
         <td>{{ r.origen_detalles?.nombre }}</td>
         <td>{{ r.destino_detalles?.nombre }}</td>
@@ -25,42 +36,90 @@
           </span>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-edit" (click)="abrirModal(r)">✏️</button>
-          <button class="btn-action btn-delete" (click)="eliminar(r.id)">🗑️</button>
+          <button class="btn-action btn-view" (click)="verRuta(r)">👁️ Ver Mapa</button>
+          <button class="btn-action btn-edit" (click)="editarRuta(r)">✏️ Editar</button>
+          <button class="btn-action btn-delete" (click)="eliminar(r.id)">🗑️ Eliminar</button>
         </td>
       </tr>
     </tbody>
   </table>
 
   <div class="crud-modal-overlay" *ngIf="mostrarModal">
-    <div class="crud-modal">
-      <h3>Gestionar Ruta</h3>
-      <form (ngSubmit)="guardar()">
-        <div class="form-group">
-          <label>Origen</label>
-          <select name="origen" [(ngModel)]="rutaActual.origen" (change)="calcularDistancia()" required>
-            <option *ngFor="let c of ciudades" [value]="c.id">{{ c.nombre }} ({{ c.pais }})</option>
-          </select>
+    <div class="crud-modal slide-in-bottom">
+      <div class="modal-header">
+        <h3>📍 Definir Nueva Ruta Maestra</h3>
+      </div>
+      <form (ngSubmit)="guardar()" style="margin-top: 15px;">
+        
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+          <div class="form-group" style="flex: 1;">
+            <label style="color: #4f46e5; font-weight: bold;">🔴 Ciudad de Origen</label>
+            <select name="origen" [(ngModel)]="rutaActual.origen" (change)="calcularDistancia()" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+              <option *ngFor="let c of ciudades" [value]="c.id">{{ c.nombre }} ({{ c.pais }})</option>
+            </select>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label style="color: #059669; font-weight: bold;">🟢 Ciudad de Destino</label>
+            <select name="destino" [(ngModel)]="rutaActual.destino" (change)="calcularDistancia()" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+              <option *ngFor="let c of ciudades" [value]="c.id">{{ c.nombre }} ({{ c.pais }})</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Destino</label>
-          <select name="destino" [(ngModel)]="rutaActual.destino" (change)="calcularDistancia()" required>
-            <option *ngFor="let c of ciudades" [value]="c.id">{{ c.nombre }} ({{ c.pais }})</option>
-          </select>
+
+        <div style="background: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label>Nombre Identificador de Ruta</label>
+            <input type="text" name="nombre" [(ngModel)]="rutaActual.nombre_ruta" placeholder="Ej: Troncal La Paz - Santa Cruz" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Distancia en Carretera (Km) <span style="color: #64748b; font-size: 0.85em; font-weight: normal;">(Autocalculado por Google Maps)</span></label>
+            <input type="number" name="dist" [(ngModel)]="rutaActual.distancia_km" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; color: #0f172a; background: #e2e8f0; cursor: not-allowed;" readonly>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Nombre Identificador de Ruta</label>
-          <input type="text" name="nombre" [(ngModel)]="rutaActual.nombre_ruta" placeholder="Ej: Troncal La Paz - Santa Cruz" required>
-        </div>
-        <div class="form-group">
-          <label>Distancia (Km) - <small>Calculado automáticamente por Google</small></label>
-          <input type="number" name="dist" [(ngModel)]="rutaActual.distancia_km" required>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" (click)="mostrarModal = false">Cerrar</button>
-          <button type="submit" class="btn-save">Guardar Ruta</button>
+
+        <div class="modal-actions" style="margin-top: 25px; display: flex; gap: 15px;">
+          <button type="button" class="btn-cancel" (click)="mostrarModal = false" style="flex: 1;">Cancelar</button>
+          <button type="submit" class="btn-save" style="flex: 1; padding: 12px; font-size: 1rem;">Guardar Ruta</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarModalMapa">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header flex-between">
+        <h3>📍 Hoja de Ruta: <span class="text-primary">{{ rutaVer.nombre_ruta }}</span></h3>
+      </div>
+      
+      <div class="grid-detalles-mapa">
+        <div class="col-datos">
+          <div class="card-detalle">
+            <p class="card-subtitle">PUNTOS DE RUTA</p>
+            <div class="crono-item"><strong>A (Origen):</strong> {{ rutaVer.origen_detalles?.nombre }} ({{ rutaVer.origen_detalles?.pais }})</div>
+            <div class="crono-item"><strong>B (Destino):</strong> {{ rutaVer.destino_detalles?.nombre }} ({{ rutaVer.destino_detalles?.pais }})</div>
+          </div>
+          
+          <div class="card-detalle">
+            <p class="card-subtitle">DISTANCIA</p>
+            <div style="margin-top: 10px; font-weight: bold; color: #0284c7; background: #f0f9ff; padding: 5px 10px; border-radius: 5px; display: inline-block;">
+              🛣️ {{ rutaVer.distancia_km }} km
+            </div>
+          </div>
+        </div>
+
+        <div class="col-mapa" style="min-height: 400px; display: flex; flex-direction: column;">
+          <div id="mapRuta" style="flex: 1; width: 100%; border-radius: 8px;"></div>
+          <div class="nota-info" style="margin-top: 10px;">
+             <small><strong>Nota:</strong> Ruta oficial autorizada para la flota.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-cancel w-100" (click)="mostrarModalMapa = false">Cerrar Detalles</button>
+      </div>
     </div>
   </div>
 </div>

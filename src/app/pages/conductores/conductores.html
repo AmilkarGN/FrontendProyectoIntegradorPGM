@@ -1,7 +1,18 @@
 <div class="crud-container fade-in">
-  <div class="crud-header">
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Gestión de Conductores (Flota)</h2>
     <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Asignar Conductor</button>
+  </div>
+
+  <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)">
+  </app-query-builder>
+
+  <!-- Contador de resultados -->
+  <div style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: #475569;">
+    Mostrando {{ filtrados.length }} conductor(es) que coinciden con los filtros.
   </div>
 
   <table class="crud-table" *ngIf="!cargando">
@@ -16,7 +27,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let conductor of conductores">
+      <tr *ngFor="let conductor of filtrados">
         <td>
           <img [src]="obtenerImagenUrl(conductor.usuario_detalles?.foto_perfil)" class="avatar-img" alt="Perfil">
         </td>
@@ -36,9 +47,9 @@
           </span>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-view" (click)="verConductor(conductor)" title="Ver Detalles">👁️</button>
-          <button class="btn-action btn-edit" (click)="editarConductor(conductor)" title="Editar">✏️</button>
-          <button class="btn-action btn-delete" (click)="eliminarConductor(conductor.id)" title="Eliminar">🗑️</button>
+          <button class="btn-action btn-view" (click)="verConductor(conductor)" title="Ver Detalles">👁️ Ver</button>
+          <button class="btn-action btn-edit" (click)="editarConductor(conductor)" title="Editar">✏️ Editar</button>
+          <button class="btn-action btn-delete" (click)="eliminarConductor(conductor.id)" title="Eliminar">🗑️ Eliminar</button>
         </td>
       </tr>
     </tbody>

@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-admin-fatiga',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, FormsModule],
   templateUrl: './admin-fatiga.html',
   styleUrls: ['./admin-fatiga.css']
 })
@@ -14,6 +15,7 @@ export class AdminFatigaComponent implements OnInit {
   alertas: any[] = [];
   cargando = true;
   viendoDescartadas = false;
+  terminoBusqueda = '';
 
   constructor(private http: HttpClient) {}
 
@@ -40,6 +42,15 @@ export class AdminFatigaComponent implements OnInit {
     });
   }
 
+  get filtrados(): any[] {
+    if (!this.terminoBusqueda) return this.alertas;
+    const term = this.terminoBusqueda.toLowerCase();
+    return this.alertas.filter(a => {
+      const searchStr = `${a.conductor_nombre} ${a.nivel_fatiga}`.toLowerCase();
+      return searchStr.includes(term);
+    });
+  }
+
   toggleVista() {
     this.viendoDescartadas = !this.viendoDescartadas;
     this.cargarAlertas();
@@ -63,6 +74,29 @@ export class AdminFatigaComponent implements OnInit {
             this.cargarAlertas();
           },
           error: () => Swal.fire('Error', 'Hubo un problema al descartar la alerta.', 'error')
+        });
+      }
+    });
+  }
+
+  restaurarAlerta(id: number) {
+    Swal.fire({
+      title: '¿Restaurar Alerta?',
+      text: "¿Deseas restaurar esta alerta como válida?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.http.post(`http://localhost:8000/api/alertas-fatiga/${id}/restaurar/`, {}).subscribe({
+          next: () => {
+            Swal.fire('Restaurada', 'La alerta ha sido restaurada exitosamente.', 'success');
+            this.cargarAlertas();
+          },
+          error: () => Swal.fire('Error', 'Hubo un problema al restaurar la alerta.', 'error')
         });
       }
     });

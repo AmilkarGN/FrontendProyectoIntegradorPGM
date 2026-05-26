@@ -40,6 +40,33 @@ export class ConfigFlotaComponent implements OnInit {
   mensajeToast: string = '';
   tipoToast: 'success' | 'error' = 'success';
   mostrarToast: boolean = false;
+  
+  terminoBusqueda: string = '';
+
+  get filtrados(): any[] {
+    if (!this.terminoBusqueda) {
+      if (this.tabActiva === 'modelos') return this.modelos;
+      if (this.tabActiva === 'tipos') return this.tipos;
+      if (this.tabActiva === 'estados') return this.estados;
+      if (this.tabActiva === 'asignaciones') return this.asignacionesActivas;
+    }
+    
+    const term = this.terminoBusqueda.toLowerCase();
+    
+    if (this.tabActiva === 'modelos') {
+      return this.modelos.filter((m: any) => `${m.marca} ${m.nombre_modelo} ${m.anio}`.toLowerCase().includes(term));
+    }
+    if (this.tabActiva === 'tipos') {
+      return this.tipos.filter((t: any) => `${t.nombre}`.toLowerCase().includes(term));
+    }
+    if (this.tabActiva === 'estados') {
+      return this.estados.filter((e: any) => `${e.nombre}`.toLowerCase().includes(term));
+    }
+    if (this.tabActiva === 'asignaciones') {
+      return this.asignacionesActivas.filter((a: any) => `${a.vehiculo} ${a.conductor_nombre} ${a.conductor_licencia}`.toLowerCase().includes(term));
+    }
+    return [];
+  }
 
   constructor(
     private vehiculoService: VehiculoService,

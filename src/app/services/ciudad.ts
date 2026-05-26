@@ -8,6 +8,8 @@ export interface Ciudad {
   nombre: string;
   region_estado: string;
   pais: string;
+  fecha_eliminacion?: string;
+  eliminado_por_nombre?: string;
 }
 
 @Injectable({
@@ -25,8 +27,9 @@ export class CiudadService {
   }
 
   // R (Read All) - GET
-  obtenerCiudades(): Observable<Ciudad[]> {
-    return this.http.get<Ciudad[]>(this.apiUrl);
+  obtenerCiudades(eliminados: boolean = false): Observable<Ciudad[]> {
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Ciudad[]>(url);
   }
 
   // R (Read One) - GET
@@ -42,5 +45,9 @@ export class CiudadService {
   // D (Delete) - DELETE
   eliminarCiudad(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}${id}/`);
+  }
+
+  restaurarCiudad(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}${id}/restaurar/`, {});
   }
 }

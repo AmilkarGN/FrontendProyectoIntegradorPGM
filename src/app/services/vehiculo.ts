@@ -20,6 +20,8 @@ export interface Vehiculo {
   vencimiento_soat?: string;
   vencimiento_inspeccion_tecnica?: string;
   foto?: string;
+  fecha_eliminacion?: string;
+  eliminado_por_nombre?: string;
 }
 
 export interface TipoVehiculo { 
@@ -50,7 +52,10 @@ export class VehiculoService {
   obtenerEstados(): Observable<EstadoVehiculo[]> { return this.http.get<EstadoVehiculo[]>(this.estadosUrl); }
 
   // --- CRUD VEHÍCULOS (Usamos FormData para poder enviar la foto) ---
-  obtenerVehiculos(): Observable<Vehiculo[]> { return this.http.get<Vehiculo[]>(this.apiUrl); }
+  obtenerVehiculos(eliminados: boolean = false): Observable<Vehiculo[]> { 
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Vehiculo[]>(url); 
+  }
   
   crearVehiculo(datos: FormData): Observable<Vehiculo> { 
     return this.http.post<Vehiculo>(this.apiUrl, datos); 
@@ -63,6 +68,10 @@ export class VehiculoService {
   
   eliminarVehiculo(placa: string): Observable<any> { 
     return this.http.delete(`${this.apiUrl}${placa}/`); 
+  }
+
+  restaurarVehiculo(placa: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}${placa}/restaurar/`, {});
   }
   // En src/app/services/vehiculo.service.ts
 

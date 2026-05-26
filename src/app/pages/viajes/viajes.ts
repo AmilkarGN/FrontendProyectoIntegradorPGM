@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ViajeService } from '../../services/viaje';
 import { ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
+
 @Component({
   selector: 'app-viajes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './viajes.html',
   styleUrls: ['./viajes.css']
 })
@@ -45,10 +48,13 @@ export class ViajesComponent implements OnInit {
   mensajeToast = '';
   tipoToast: 'success' | 'error' = 'success';
   mostrarToast = false;
+  
+  kpiViajes: any = null;
 
   constructor(
   private viajeService: ViajeService,
-  private route: ActivatedRoute, 
+  private route: ActivatedRoute,
+  private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -92,7 +98,9 @@ export class ViajesComponent implements OnInit {
         this.filtrarEquiposDisponibles();
       });
       
-      
+      this.http.get('http://localhost:8000/api/estadisticas/viajes/').subscribe(data => {
+        this.kpiViajes = data;
+      });
     }
 
   cargarViajes() {
@@ -100,6 +108,28 @@ export class ViajesComponent implements OnInit {
       this.viajes = res;
       this.filtrarEquiposDisponibles(); // Volvemos a filtrar por si un viaje terminó
     });
+  }
+
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'codigo_viaje', nombre: 'Código Viaje', tipo: 'texto' },
+    { campo: 'vehiculo_placa', nombre: 'Placa Vehículo', tipo: 'texto' },
+    { campo: 'conductor_nombre', nombre: 'Conductor', tipo: 'texto' },
+    { campo: 'estado_nombre', nombre: 'Estado de Viaje', tipo: 'texto' },
+    { campo: 'ruta_nombre', nombre: 'Ruta Asignada', tipo: 'texto' },
+    { campo: 'fecha_salida', nombre: 'Fecha Salida', tipo: 'fecha' },
+    { campo: 'fecha_llegada_estimada', nombre: 'Fecha Llegada', tipo: 'fecha' },
+    { campo: 'costo_total_estimado', nombre: 'Costo Total Estimado', tipo: 'numero' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): any[] {
+    return this.viajes.filter(v => evaluarFiltrosDinámicos(v, this.reglasActivas));
   }
 
   // --- INTELIGENCIA DE NEGOCIO ---

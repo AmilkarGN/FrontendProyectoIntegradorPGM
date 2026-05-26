@@ -13,6 +13,8 @@ export interface CategoriaLicencia {
   tonelaje_maximo?: number;
   pasajeros_maximo?: number;
   antiguedad_requerida_anios?: number;
+  fecha_eliminacion?: string;
+  eliminado_por_nombre?: string;
 }
 
 export interface Conductor {
@@ -51,10 +53,12 @@ export class ConductorService {
   eliminarConductor(id: number): Observable<any> { return this.http.delete(`${this.apiUrl}${id}/`); }
 
   // --- OBTENER CATEGORÍAS PARA EL SELECT ---
-  obtenerCategorias(): Observable<CategoriaLicencia[]> { return this.http.get<CategoriaLicencia[]>(this.categoriasUrl); }
-  // --- CRUD CATEGORÍAS DE LICENCIA ---
-  // obtenerCategorias() ya lo tienes arriba...
+  obtenerCategorias(eliminados: boolean = false): Observable<CategoriaLicencia[]> {
+    const url = eliminados ? `${this.categoriasUrl}?eliminados=true` : this.categoriasUrl;
+    return this.http.get<CategoriaLicencia[]>(url);
+  }
   
+  // --- CRUD CATEGORÍAS DE LICENCIA ---
   crearCategoria(categoria: CategoriaLicencia): Observable<CategoriaLicencia> {
     return this.http.post<CategoriaLicencia>(this.categoriasUrl, categoria);
   }
@@ -65,6 +69,10 @@ export class ConductorService {
 
   eliminarCategoria(id: number): Observable<any> {
     return this.http.delete(`${this.categoriasUrl}${id}/`);
+  }
+
+  restaurarCategoria(id: number): Observable<any> {
+    return this.http.post(`${this.categoriasUrl}${id}/restaurar/`, {});
   }
 }
 

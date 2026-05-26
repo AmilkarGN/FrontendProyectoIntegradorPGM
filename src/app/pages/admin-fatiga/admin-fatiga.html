@@ -1,13 +1,19 @@
-<div class="page-container">
-  <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+<div class="page-container fade-in">
+  <div class="header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div>
       <h1>Historial de <strong class="text-orange">Fatiga (IA)</strong></h1>
       <p>Auditoría de eventos críticos detectados por el sistema de inteligencia artificial en cabina.</p>
     </div>
-    <button class="btn-toggle" (click)="toggleVista()" [class.active]="viendoDescartadas">
-      <span class="material-symbols-rounded icon-xs">{{ viendoDescartadas ? 'visibility_off' : 'delete' }}</span>
-      {{ viendoDescartadas ? 'Ver Alertas Activas' : 'Ver Papelera (Descartadas)' }}
-    </button>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div class="search-box">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Buscar conductor, nivel...">
+      </div>
+      <button class="btn-toggle" (click)="toggleVista()" [class.active]="viendoDescartadas">
+        <span class="material-symbols-rounded icon-xs">{{ viendoDescartadas ? 'visibility_off' : 'delete' }}</span>
+        {{ viendoDescartadas ? 'Ver Alertas Activas' : 'Ver Papelera' }}
+      </button>
+    </div>
   </div>
 
   <!-- Estado de Carga -->
@@ -33,7 +39,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let alerta of alertas">
+          <tr *ngFor="let alerta of filtrados">
             <td>#{{ alerta.id }}</td>
             <td>
               <div class="font-bold">{{ alerta.fecha_hora | date:'dd/MM/yyyy' }}</div>
@@ -59,13 +65,15 @@
               {{ alerta.latitud | number:'1.4-4' }}, {{ alerta.longitud | number:'1.4-4' }}
             </td>
             <td class="text-center">
-              <button *ngIf="!viendoDescartadas" class="btn-action btn-delete" (click)="eliminarAlerta(alerta.id)" title="Descartar Alerta">
+              <button *ngIf="!viendoDescartadas" class="btn-action btn-delete" (click)="eliminarAlerta(alerta.id)" title="Descartar Alerta (Falsa Alarma)">
                 <span class="material-symbols-rounded">delete</span>
               </button>
-              <span *ngIf="viendoDescartadas" class="badge-placa" style="background-color: #3f3f46; color: #a1a1aa; border: none;">DESCARTADA</span>
+              <button *ngIf="viendoDescartadas" class="btn-action" style="background: #10b981; color: white;" (click)="restaurarAlerta(alerta.id)" title="Restaurar Alerta">
+                <span class="material-symbols-rounded">restore</span>
+              </button>
             </td>
           </tr>
-          <tr *ngIf="alertas.length === 0">
+          <tr *ngIf="filtrados.length === 0">
             <td colspan="8" class="text-center empty-state">
               <span class="material-symbols-rounded icon-large">check_circle</span>
               <p>No hay registros de fatiga. ¡Excelente trabajo de los conductores!</p>

@@ -1,8 +1,18 @@
-
 <div class="crud-container fade-in">
   <div class="crud-header">
-    <h2>Categorías de Licencias</h2>
-    <button class="btn-action btn-add" (click)="abrirModal()">+ Nueva Categoría</button>
+    <h2>Normativa: Categorías de Licencia</h2>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div class="search-box">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Buscar categoría...">
+      </div>
+      <button class="btn-action" style="background: #e2e8f0; color: #475569;" (click)="alternarPapelera()" [ngStyle]="{'background': viendoPapelera ? '#fee2e2' : '#e2e8f0', 'color': viendoPapelera ? '#ef4444' : '#475569'}" title="Ver Papelera">
+        <span class="material-symbols-rounded">delete</span> 
+        <span *ngIf="!viendoPapelera">Papelera</span>
+        <span *ngIf="viendoPapelera">Cerrar Papelera</span>
+      </button>
+      <button class="btn-action btn-add" (click)="abrirModal()">+ Añadir Categoría Especial</button>
+    </div>
   </div>
 
   <table class="crud-table" *ngIf="!cargando">
@@ -15,7 +25,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let cat of categorias">
+      <tr *ngFor="let cat of filtrados">
         <td>{{ cat.id }}</td>
         <td><strong>{{ cat.nombre }}</strong></td>
         <td>
@@ -24,8 +34,22 @@
           </span>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-edit" (click)="abrirModal(cat)">✏️</button>
-          <button class="btn-action btn-delete" (click)="eliminarCategoria(cat.id)">🗑️</button>
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-edit" (click)="abrirModal(cat)">
+              <i class="fas fa-pen"></i> ✏️ Modificar
+            </button>
+            <button class="btn-action btn-delete" (click)="eliminarCategoria(cat.id)">
+              <i class="fas fa-trash"></i> 🗑️ Eliminar
+            </button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" (click)="restaurarCategoria(cat.id)" title="Restaurar" style="color: #10b981; background: #d1fae5;">
+              ♻️ Restaurar
+            </button>
+            <button class="btn-action" (click)="verAuditoria(cat)" title="Ver Auditoría" style="color: #6366f1; background: #e0e7ff;">
+              👁️ Info
+            </button>
+          </ng-container>
         </td>
       </tr>
     </tbody>

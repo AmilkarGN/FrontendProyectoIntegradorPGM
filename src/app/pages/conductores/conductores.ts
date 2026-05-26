@@ -3,14 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConductorService, Conductor, CategoriaLicencia } from '../../services/conductor';
 import { UsuarioService, Usuario } from '../../services/usuario';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
 @Component({
   selector: 'app-conductores',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './conductores.html',
-  styleUrls: ['../usuarios/usuarios.css'] 
+  styleUrls: ['./conductores.css'] 
 })
 export class ConductoresComponent implements OnInit {
   conductores: Conductor[] = [];
@@ -26,9 +29,14 @@ export class ConductoresComponent implements OnInit {
   usuariosDisponibles: Usuario[] = [];
   conductorActual: Conductor | any = {}; 
   baseMediaUrl = 'http://localhost:8000';
+  
+  kpiConductores: any = null;
+  filtroDisponibilidad: string = '';
+
   constructor(
     private conductorService: ConductorService,
-    private usuarioService: UsuarioService
+    private usuarioService: UsuarioService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -73,6 +81,27 @@ export class ConductoresComponent implements OnInit {
       const yaTienePerfil = this.conductores.some(conductor => conductor.usuario === user.id);
       return tieneRolCorrecto && !yaTienePerfil;
     });
+  }
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'usuario_detalles.nombre', nombre: 'Nombre', tipo: 'texto' },
+    { campo: 'usuario_detalles.apellido_paterno', nombre: 'Apellido Paterno', tipo: 'texto' },
+    { campo: 'usuario_detalles.ci', nombre: 'Carnet de Identidad', tipo: 'texto' },
+    { campo: 'nro_licencia', nombre: 'Nro. Licencia', tipo: 'texto' },
+    { campo: 'categoria_detalles.nombre', nombre: 'Categoría', tipo: 'texto' },
+    { campo: 'vencimiento_licencia', nombre: 'Venc. Licencia', tipo: 'fecha' },
+    { campo: 'disponible', nombre: 'Está Disponible', tipo: 'booleano' },
+    { campo: 'grupo_sanguineo', nombre: 'Grupo Sanguíneo', tipo: 'texto' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): Conductor[] {
+    return this.conductores.filter(c => evaluarFiltrosDinámicos(c, this.reglasActivas));
   }
 
   // --- MÉTODOS DEL MODAL PRINCIPAL ---

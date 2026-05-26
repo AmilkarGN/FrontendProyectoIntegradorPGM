@@ -1,0 +1,49 @@
+<div class="query-builder-compact-container">
+  <div class="qb-header-compact">
+    <!-- Buscador estilo píldora -->
+    <div class="search-box">
+      <span class="material-symbols-rounded">search</span>
+      <input type="text" [(ngModel)]="busquedaGlobal" (input)="emitirFiltros()" placeholder="Búsqueda general (palabras clave)...">
+    </div>
+    
+    <!-- Botones de Acción -->
+    <div class="qb-actions">
+      <button class="btn-clear-filters" (click)="limpiarFiltros()" title="Limpiar todos los filtros">
+        <span class="material-symbols-rounded">mop</span>
+      </button>
+      <button class="btn-toggle-filters" (click)="toggleFiltros()" [class.active]="mostrarFiltros" title="Filtros Avanzados">
+        <span class="material-symbols-rounded">tune</span>
+      </button>
+      <button class="btn-toggle-papelera" (click)="alternarPapelera()" [class.active-trash]="viendoPapelera" title="Ver Papelera (Registros Eliminados)">
+        <span class="material-symbols-rounded">delete</span> 
+        <span *ngIf="!viendoPapelera">Papelera</span>
+        <span *ngIf="viendoPapelera">Cerrar Papelera</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel Desplegable de Filtros -->
+  <div class="qb-filters-panel fade-in" *ngIf="mostrarFiltros">
+    <div class="qb-filters-grid">
+    <div class="qb-filter-item fade-in" *ngFor="let col of columnas">
+      <label class="qb-filter-label">{{ col.nombre }}</label>
+      
+      <!-- Filtro Texto -->
+      <input *ngIf="col.tipo === 'texto'" type="text" class="qb-filter-input" [(ngModel)]="filtrosValor[col.campo]" (input)="emitirFiltros()" placeholder="Cualquier {{col.nombre.toLowerCase()}}...">
+      
+      <!-- Filtro Número -->
+      <input *ngIf="col.tipo === 'numero'" type="number" class="qb-filter-input" [(ngModel)]="filtrosValor[col.campo]" (input)="emitirFiltros()" placeholder="Valor exacto...">
+      
+      <!-- Filtro Fecha -->
+      <input *ngIf="col.tipo === 'fecha'" type="date" class="qb-filter-input" [(ngModel)]="filtrosValor[col.campo]" (change)="emitirFiltros()">
+      
+      <!-- Filtro Booleano -->
+      <select *ngIf="col.tipo === 'booleano'" class="qb-filter-input qb-filter-select" [(ngModel)]="filtrosValor[col.campo]" (change)="emitirFiltros()">
+        <option [ngValue]="undefined">-- Todos --</option>
+        <option value="true">Sí</option>
+        <option value="false">No</option>
+      </select>
+    </div>
+  </div>
+  </div>
+</div>

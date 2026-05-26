@@ -1,10 +1,19 @@
 <div class="crud-container fade-in">
   
   <div class="crud-header">
-    <h2>Gestión de Ciudades</h2>
-    <button class="btn-action btn-add" (click)="abrirModal()">
-      <i class="fas fa-plus"></i> + Añadir Nueva Ciudad
-    </button>
+    <h2>Catálogo Geográfico</h2>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div class="search-box">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Buscar ciudad, región o país...">
+      </div>
+      <button class="btn-action" style="background: #e2e8f0; color: #475569;" (click)="alternarPapelera()" [ngStyle]="{'background': viendoPapelera ? '#fee2e2' : '#e2e8f0', 'color': viendoPapelera ? '#ef4444' : '#475569'}" title="Ver Papelera">
+        <span class="material-symbols-rounded">delete</span> 
+        <span *ngIf="!viendoPapelera">Papelera</span>
+        <span *ngIf="viendoPapelera">Cerrar Papelera</span>
+      </button>
+      <button class="btn-action btn-add" (click)="abrirModal()">+ Añadir Locación</button>
+    </div>
   </div>
 
   <div *ngIf="cargando" style="text-align: center; padding: 50px;">
@@ -22,18 +31,28 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let ciudad of ciudades">
+      <tr *ngFor="let ciudad of filtrados">
         <td>{{ ciudad.id }}</td>
         <td><strong>{{ ciudad.nombre }}</strong></td>
         <td>{{ ciudad.region_estado }}</td>
         <td>{{ ciudad.pais }}</td>
         <td class="actions-column">
-          <button class="btn-action btn-edit" (click)="editarCiudad(ciudad)">
-            <i class="fas fa-pen"></i> ✏️ Modificar
-          </button>
-          <button class="btn-action btn-delete" (click)="eliminarCiudad(ciudad.id)">
-            <i class="fas fa-trash"></i> 🗑️ Eliminar
-          </button>
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-edit" (click)="editarCiudad(ciudad)">
+              <i class="fas fa-pen"></i> ✏️ Modificar
+            </button>
+            <button class="btn-action btn-delete" (click)="eliminarCiudad(ciudad.id)">
+              <i class="fas fa-trash"></i> 🗑️ Eliminar
+            </button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" (click)="restaurarCiudad(ciudad.id)" title="Restaurar" style="color: #10b981; background: #d1fae5;">
+              ♻️ Restaurar
+            </button>
+            <button class="btn-action" (click)="verAuditoria(ciudad)" title="Ver Auditoría" style="color: #6366f1; background: #e0e7ff;">
+              👁️ Info
+            </button>
+          </ng-container>
         </td>
       </tr>
       

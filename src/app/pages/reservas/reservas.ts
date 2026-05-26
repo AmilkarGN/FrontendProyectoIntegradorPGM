@@ -9,12 +9,14 @@ import Swal from 'sweetalert2';
 
 declare const google: any;
 
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
+
 @Component({
   selector: 'app-reservas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './reservas.html',
-  styleUrls: ['./reservas.css']
+  styleUrls: ['../../app.css']
 })
 export class ReservasComponent implements OnInit {
   @ViewChild('mapContainer') mapElement!: ElementRef;
@@ -99,6 +101,30 @@ export class ReservasComponent implements OnInit {
     this.clienteService.obtenerClientes().subscribe(data => this.clientes = data);
   }
 
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'codigo_reserva', nombre: 'Código de Reserva', tipo: 'texto' },
+    { campo: 'cliente_detalles.razon_social', nombre: 'Cliente (Razón Social)', tipo: 'texto' },
+    { campo: 'cliente_detalles.usuario_detalles.nombre', nombre: 'Nombre Contacto', tipo: 'texto' },
+    { campo: 'direccion_origen', nombre: 'Origen', tipo: 'texto' },
+    { campo: 'direccion_destino', nombre: 'Destino', tipo: 'texto' },
+    { campo: 'peso_estimado_kg', nombre: 'Peso (Kg)', tipo: 'numero' },
+    { campo: 'distancia_real_km', nombre: 'Distancia (Km)', tipo: 'numero' },
+    { campo: 'es_fragil', nombre: 'Es Carga Frágil', tipo: 'booleano' },
+    { campo: 'estado_nombre', nombre: 'Estado', tipo: 'texto' },
+    { campo: 'fecha_tentativa_viaje', nombre: 'Fecha Solicitada', tipo: 'fecha' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): Reserva[] {
+    return this.reservas.filter(r => evaluarFiltrosDinámicos(r, this.reglasActivas));
+  }
+
   abrirModalConFecha(fecha: string): void {
     this.abrirModal();
     this.reservaActual.fecha_tentativa_viaje = fecha;
@@ -181,6 +207,31 @@ export class ReservasComponent implements OnInit {
       );
     } else {
       Swal.fire('Error', 'Tu navegador no soporta geolocalización.', 'error');
+    }
+  }
+
+  limpiarMapa(): void {
+    this.reservaActual.direccion_origen = '';
+    this.reservaActual.latitud_origen = null;
+    this.reservaActual.longitud_origen = null;
+    
+    this.reservaActual.direccion_destino = '';
+    this.reservaActual.latitud_destino = null;
+    this.reservaActual.longitud_destino = null;
+    
+    this.reservaActual.distancia_real_km = null;
+    this.reservaActual.tiempo_estimado_horas = null;
+
+    if (this.directionsRenderer) {
+      this.directionsRenderer.setDirections({routes: []});
+    }
+    if (this.marcadorOrigen) {
+      this.marcadorOrigen.setMap(null);
+    }
+    // Centrar mapa de vuelta
+    if (this.map) {
+      this.map.setCenter({ lat: -16.500, lng: -68.150 });
+      this.map.setZoom(6);
     }
   }
 

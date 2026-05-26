@@ -39,6 +39,17 @@ export class RolesComponent implements OnInit {
     });
   }
 
+  terminoBusqueda: string = '';
+
+  get filtrados(): Rol[] {
+    if (!this.terminoBusqueda) return this.roles;
+    const term = this.terminoBusqueda.toLowerCase();
+    return this.roles.filter(r => {
+      const searchStr = `${r.nombre_rol} ${r.descripcion}`.toLowerCase();
+      return searchStr.includes(term);
+    });
+  }
+
   abrirModal(): void {
     this.rolActual = { id: 0, nombre_rol: '', descripcion: '' };
     this.mostrarFormulario = true;

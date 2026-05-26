@@ -1,7 +1,18 @@
 <div class="crud-container fade-in">
-  <div class="crud-header">
-    <h2>Gestión de Clientes Corporativos y Particulares</h2>
-    <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Registrar Cliente</button>
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
+    <h2>Cartera de Clientes</h2>
+    <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Cliente</button>
+  </div>
+
+  <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)">
+  </app-query-builder>
+
+  <!-- Contador de resultados -->
+  <div style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: #475569;">
+    Mostrando {{ filtrados.length }} cliente(s) que coinciden con los filtros.
   </div>
 
   <table class="crud-table" *ngIf="!cargando">
@@ -16,7 +27,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let c of clientes">
+      <tr *ngFor="let c of filtrados">
         <td>
           <img [src]="obtenerImagenUrl(c.usuario_detalles?.foto_perfil)" class="avatar-img" alt="Perfil">
         </td>
@@ -39,9 +50,9 @@
           <small>📞 {{ c.telefono_principal || 'N/A' }}</small>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-view" (click)="verCliente(c)" title="Ver Detalles">👁️</button>
-          <button class="btn-action btn-edit" (click)="editarCliente(c)">✏️</button>
-          <button class="btn-action btn-delete" (click)="eliminarCliente(c.id)">🗑️</button>
+          <button class="btn-action btn-view" (click)="verCliente(c)" title="Ver Detalles">👁️ Ver</button>
+          <button class="btn-action btn-edit" (click)="editarCliente(c)">✏️ Editar</button>
+          <button class="btn-action btn-delete" (click)="eliminarCliente(c.id)">🗑️ Eliminar</button>
         </td>
       </tr>
     </tbody>

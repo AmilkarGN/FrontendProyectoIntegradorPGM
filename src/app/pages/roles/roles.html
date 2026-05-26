@@ -1,10 +1,14 @@
 <div class="crud-container fade-in">
   
   <div class="crud-header">
-    <h2>Gestión de Roles del Sistema</h2>
-    <button class="btn-action btn-add" (click)="abrirModal()">
-      <i class="fas fa-plus"></i> + Crear Nuevo Rol
-    </button>
+    <h2>Control de Roles y Permisos</h2>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div class="search-box">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Buscar rol, descripción...">
+      </div>
+      <button class="btn-action btn-add" (click)="abrirModal()">+ Crear Nuevo Rol</button>
+    </div>
   </div>
 
   <div *ngIf="cargando" style="text-align: center; padding: 50px;">
@@ -17,11 +21,11 @@
         <th>ID</th>
         <th>Nombre del Rol</th>
         <th>Descripción de Permisos</th>
-        <th>Acciones</th>
+        <th>Acciones Permitidas</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let rol of roles">
+      <tr *ngFor="let rol of filtrados">
         <td>{{ rol.id }}</td>
         <td>
           <strong>{{ rol.nombre_rol }}</strong>

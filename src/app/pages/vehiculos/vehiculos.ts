@@ -5,12 +5,15 @@ import {
   VehiculoService, Vehiculo, ModeloVehiculo, 
   TipoVehiculo, EstadoVehiculo 
 } from '../../services/vehiculo';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+
+import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
 @Component({
   selector: 'app-vehiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './vehiculos.html',
   styleUrls: ['./vehiculos.css'] // Reutilizamos tu excelente diseño de tablas
 })
@@ -27,12 +30,21 @@ export class VehiculosComponent implements OnInit {
   vehiculoActual: Vehiculo | any = {};
   archivoFoto: File | null = null;
   baseMediaUrl = 'http://localhost:8000';
+  foto?: string;
+  fecha_eliminacion?: string;
+  eliminado_por_nombre?: string;
   fechaHoy: string = new Date().toISOString().split('T')[0];
 
   // Guardamos la placa original al editar por si el usuario la intenta cambiar
   placaOriginalEdicion: string = '';
+  
+  kpiVehiculos: any = null;
+  viendoPapelera = false;
 
-  constructor(private vehiculoService: VehiculoService) {}
+  constructor(
+    private vehiculoService: VehiculoService,
+    private http: HttpClient
+  ) {}
 
   ngOnInit(): void {
     this.cargarDatosIniciales();
@@ -44,18 +56,48 @@ export class VehiculosComponent implements OnInit {
     this.vehiculoService.obtenerTipos().subscribe(t => this.tipos = t);
     this.vehiculoService.obtenerEstados().subscribe(e => this.estados = e);
     this.cargarVehiculos();
+    
+    // Cargar KPIs
+    this.http.get('http://localhost:8000/api/estadisticas/vehiculos/').subscribe(data => {
+      this.kpiVehiculos = data;
+    });
   }
 
   cargarVehiculos(): void {
-    this.vehiculoService.obtenerVehiculos().subscribe({
+    this.vehiculoService.obtenerVehiculos(this.viendoPapelera).subscribe({
       next: (data) => { this.vehiculos = data; this.cargando = false; },
       error: (err) => { console.error('Error:', err); this.cargando = false; }
     });
   }
 
+  alternarPapelera(estado: boolean) {
+    this.viendoPapelera = estado;
+    this.cargarVehiculos();
+  }
+
   onFileSelected(event: any): void {
     const file: File = event.target.files[0];
     if (file) this.archivoFoto = file;
+  }
+
+  // --- QUERY BUILDER CONFIG ---
+  columnasFiltro: ColumnaFiltrable[] = [
+    { campo: 'placa', nombre: 'Placa', tipo: 'texto' },
+    { campo: 'modelo_detalles.marca', nombre: 'Marca', tipo: 'texto' },
+    { campo: 'modelo_detalles.nombre_modelo', nombre: 'Modelo', tipo: 'texto' },
+    { campo: 'tipo_detalles.nombre', nombre: 'Tipo de Vehículo', tipo: 'texto' },
+    { campo: 'estado_detalles.nombre', nombre: 'Estado Actual', tipo: 'texto' },
+    { campo: 'vencimiento_soat', nombre: 'Venc. SOAT', tipo: 'fecha' }
+  ];
+  
+  reglasActivas: ReglaFiltro[] = [];
+
+  aplicarFiltros(reglas: ReglaFiltro[]) {
+    this.reglasActivas = reglas;
+  }
+
+  get filtrados(): Vehiculo[] {
+    return this.vehiculos.filter(v => evaluarFiltrosDinámicos(v, this.reglasActivas));
   }
 
   abrirModalCrear(): void {
@@ -133,9 +175,31 @@ export class VehiculosComponent implements OnInit {
         this.vehiculoService.eliminarVehiculo(placa).subscribe({
           next: () => {
             this.vehiculos = this.vehiculos.filter(v => v.placa !== placa);
-            Swal.fire('Eliminado', 'El vehículo fue eliminado exitosamente.', 'success');
+            Swal.fire('Eliminado', 'El vehículo fue movido a la papelera.', 'success');
           },
           error: () => Swal.fire('Error', 'No se puede eliminar. Probablemente tiene asignaciones activas.', 'error')
+        });
+      }
+    });
+  }
+
+  restaurarVehiculo(placa: string): void {
+    Swal.fire({
+      title: '¿Restaurar Vehículo?',
+      text: `¿Deseas restaurar el vehículo ${placa} de la papelera?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.vehiculoService.restaurarVehiculo(placa).subscribe({
+          next: () => {
+            this.cargarVehiculos();
+            Swal.fire('Restaurado', 'El vehículo ha sido restaurado exitosamente.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar.', 'error')
         });
       }
     });
@@ -144,5 +208,23 @@ export class VehiculosComponent implements OnInit {
   obtenerImagenUrl(url: string | undefined): string {
     if (!url) return 'assets/images/icono.png'; // Tu logo de camión por defecto
     return url.startsWith('http') ? url : `${this.baseMediaUrl}${url}`;
+  }
+
+  verAuditoria(item: any): void {
+    const fecha = item.fecha_eliminacion ? new Date(item.fecha_eliminacion).toLocaleString() : 'Desconocida';
+    const autor = item.eliminado_por_nombre || 'Desconocido';
+    
+    Swal.fire({
+      title: 'Información de Eliminación',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p><strong>🕒 Fecha y Hora:</strong> ${fecha}</p>
+          <p><strong>👤 Eliminado por:</strong> ${autor}</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonColor: '#3b82f6',
+      confirmButtonText: 'Cerrar'
+    });
   }
 }

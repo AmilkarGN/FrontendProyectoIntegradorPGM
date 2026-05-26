@@ -1,25 +1,33 @@
 <div class="crud-container fade-in">
-  <div class="crud-header">
-    <div>
-      <h2>🚚 Centro de Control de Despacho</h2>
-      <p>Gestión operativa de flota y consolidación de carga.</p>
-    </div>
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
+    <h2>Control de Viajes y Despachos</h2>
     <button class="btn-action btn-add" (click)="abrirModalViaje()">+ Programar Viaje</button>
   </div>
 
-  <div class="calendar-card">
+  <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
+  <app-query-builder 
+    [columnas]="columnasFiltro" 
+    (filtrosCambiados)="aplicarFiltros($event)">
+  </app-query-builder>
+
+  <!-- Contador de resultados -->
+  <div style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: #475569;">
+    Mostrando {{ filtrados.length }} viaje(s) que coinciden con los filtros.
+  </div>
+
+  <div class="kanban-board">
     <table class="crud-table">
       <thead>
         <tr>
-          <th>Código</th>
-          <th>Unidad y Piloto</th>
-          <th>Cronograma</th>
-          <th>Estado</th>
-          <th>Acciones</th>
+          <th>ID Viaje</th>
+          <th>Ruta / Destino</th>
+          <th>Equipo Asignado</th>
+          <th>Estado Actual</th>
+          <th>Acciones Rápidas</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let v of viajes">
+        <tr *ngFor="let v of filtrados">
           <td><strong>{{ v.codigo_viaje }}</strong></td>
           <td>
             <span class="badge badge-unidad">{{ v.vehiculo_placa }}</span><br>
@@ -44,10 +52,10 @@
                 {{ viajeEnRastreo === v.codigo_viaje ? '📡' : '🛰️' }}
               </button>
               
-              <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️</button>
-              <button class="btn-icon btn-dinero" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵</button>
-              <button class="btn-icon btn-editar" (click)="abrirModalEditar(v)" title="Editar">✏️</button>
-              <button class="btn-icon btn-eliminar" (click)="eliminarViaje(v)" title="Eliminar">🗑️</button>
+              <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️ Ver</button>
+              <button class="btn-icon btn-dinero" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Gastos</button>
+              <button class="btn-icon btn-editar" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
+              <button class="btn-icon btn-eliminar" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
             </div>
           </td>
         </tr>
