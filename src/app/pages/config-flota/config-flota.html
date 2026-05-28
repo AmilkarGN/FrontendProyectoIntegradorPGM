@@ -48,7 +48,10 @@
         <ng-container *ngIf="tabActiva === 'tipos'">
           <tr *ngFor="let t of filtrados">
             <td><strong>{{ t.nombre }}</strong></td>
-            <td>{{ t.capacidad_carga_kg }} Kg</td>
+            <td>
+              <strong>{{ t.capacidad_carga_kg }} Kg</strong><br>
+              <span style="color: #64748b; font-size: 0.85em;">({{ obtenerQuintales(t.capacidad_carga_kg) }} qq)</span>
+            </td>
             <td>
               <span class="badge badge-disponible">
                 {{ t.categoria_licencia_detalles ? 'Cat. ' + t.categoria_licencia_detalles.nombre : 'Cualquiera' }}
@@ -86,7 +89,11 @@
 
           <div *ngIf="tabActiva === 'tipos'">
             <div class="form-group"><label>Nombre del Tipo</label><input type="text" name="t_nom" [(ngModel)]="objetoActual.nombre" required></div>
-            <div class="form-group"><label>Capacidad Carga (Kg)</label><input type="number" name="t_cap" [(ngModel)]="objetoActual.capacidad_carga_kg" required></div>
+            <div class="form-group">
+              <label>Capacidad Carga (Kg)</label>
+              <input type="number" name="t_cap" [(ngModel)]="objetoActual.capacidad_carga_kg" required>
+              <small *ngIf="objetoActual.capacidad_carga_kg" style="color: #64748b;">Equivale a {{ obtenerQuintales(objetoActual.capacidad_carga_kg) }} Quintales (qq)</small>
+            </div>
             <div class="form-group">
               <label>Licencia Mínima Requerida</label>
               <select name="t_lic" [(ngModel)]="objetoActual.categoria_licencia_requerida">

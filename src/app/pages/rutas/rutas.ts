@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RutaService, Ruta } from '../../services/ruta';
 import { CiudadService, Ciudad } from '../../services/ciudad';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
@@ -27,8 +28,12 @@ export class RutasComponent implements OnInit {
 
   constructor(
     private rutaService: RutaService,
-    private ciudadService: CiudadService
-  ) {}
+    private ciudadService: CiudadService,
+    private exportService: ExportService,
+    private ngZone: NgZone,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+  }
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -53,10 +58,45 @@ export class RutasComponent implements OnInit {
     this.reglasActivas = reglas;
   }
 
-  get filtrados(): Ruta[] {
+  get filtrados(): any[] {
     return this.rutas.filter(r => evaluarFiltrosDinámicos(r, this.reglasActivas));
   }
 
+  // --- REPORTES ---
+  async exportar(tipo: 'pdf' | 'excel'): Promise<void> {
+    const { value: nombreArchivo } = await Swal.fire({
+      title: `Exportar a ${tipo.toUpperCase()}`,
+      input: 'text',
+      inputLabel: 'Nombre del archivo',
+      inputValue: `Reporte_Rutas_Tramos_${new Date().getTime()}`,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) return '¡Necesitas escribir un nombre!';
+        return null;
+      }
+    });
+
+    if (nombreArchivo) {
+      const columnas = [
+        { header: 'ID Ruta', key: 'id' },
+        { header: 'Nombre / Corredor', key: 'nombre_ruta' },
+        { header: 'Origen', key: 'ciudad_origen_nombre' },
+        { header: 'Destino', key: 'ciudad_destino_nombre' },
+        { header: 'Distancia Oficial', key: 'distancia_km' }
+      ];
+
+      const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+
+      if (tipo === 'excel') {
+        this.exportService.exportarExcel(this.filtrados, columnas, nombreArchivo, autor);
+      } else {
+        this.exportService.exportarPDF(this.filtrados, columnas, 'Reporte de Rutas y Corredores Viales', nombreArchivo, autor);
+      }
+      Swal.fire('¡Éxito!', `Reporte ${tipo.toUpperCase()} generado.`, 'success');
+    }
+  }
+
+  // --- MAPA ---
   abrirModal(ruta?: Ruta): void {
     this.rutaActual = ruta ? { ...ruta } : { nombre_ruta: '', origen: null, destino: null, distancia_km: 0 };
     this.mostrarModal = true;
@@ -134,9 +174,13 @@ export class RutasComponent implements OnInit {
   }
 
   guardar(): void {
-    const request = this.rutaActual.id ? 
-      this.rutaService.actualizarRuta(this.rutaActual.id, this.rutaActual) : 
-      this.rutaService.crearRuta(this.rutaActual);
+    const payload = { ...this.rutaActual };
+    delete payload.ciudad_origen_nombre;
+    delete payload.ciudad_destino_nombre;
+
+    const request = payload.id ? 
+      this.rutaService.actualizarRuta(payload.id, payload) : 
+      this.rutaService.crearRuta(payload);
 
     request.subscribe({
       next: () => {
@@ -144,7 +188,12 @@ export class RutasComponent implements OnInit {
         this.mostrarModal = false;
         Swal.fire('¡Éxito!', 'Ruta guardada correctamente', 'success');
       },
-      error: (err) => Swal.fire('Error', 'Hubo un problema al guardar la ruta.', 'error')
+      error: (err) => {
+        console.error('Error Django en Rutas:', err.error);
+        let msg = 'Hubo un problema al guardar la ruta.';
+        if (err.error && typeof err.error === 'object') msg += ' Detalles: ' + JSON.stringify(err.error);
+        Swal.fire('Error', msg, 'error');
+      }
     });
   }
 

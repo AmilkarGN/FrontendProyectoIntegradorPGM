@@ -182,6 +182,10 @@ export class ConfigFlotaComponent implements OnInit {
 
   // --- LÓGICA DE CATÁLOGOS (Reemplazando alerts) ---
 
+  obtenerQuintales(pesoKg: number): number {
+    return pesoKg ? parseFloat((pesoKg / 45).toFixed(2)) : 0;
+  }
+
   abrirModal(item?: any): void {
     this.objetoActual = item ? { ...item } : {};
     this.mostrarModal = true;
@@ -199,10 +203,20 @@ export class ConfigFlotaComponent implements OnInit {
     }
 
     if(op) {
-      op.subscribe(() => { 
-        this.mostrarMensaje('Registro guardado.', 'success');
-        this.cargarTodo(); 
-        this.mostrarModal = false; 
+      op.subscribe({
+        next: () => { 
+          this.mostrarMensaje('Registro guardado.', 'success');
+          this.cargarTodo(); 
+          this.mostrarModal = false; 
+        },
+        error: (err: any) => {
+          console.error('Error Django en Config Flota:', err?.error);
+          let msg = 'Error al guardar el registro.';
+          if (err?.error && typeof err.error === 'object') {
+            msg += ' Detalles: ' + JSON.stringify(err.error);
+          }
+          this.mostrarMensaje(msg, 'error');
+        }
       });
     }
   }

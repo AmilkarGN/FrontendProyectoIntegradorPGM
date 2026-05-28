@@ -146,7 +146,12 @@ export class VehiculosComponent implements OnInit {
           this.cerrarModal(); 
           Swal.fire('¡Éxito!', 'Vehículo actualizado correctamente', 'success');
         },
-        error: () => Swal.fire('Error', 'Error al actualizar. Revisa la consola o asegúrate de que la placa sea válida.', 'error')
+        error: (err: any) => {
+          console.error('Error de Django al ACTUALIZAR Vehículo:', err?.error);
+          let msg = 'Error al actualizar. Revisa la consola o asegúrate de que la placa sea válida.';
+          if (err?.error && typeof err.error === 'object') msg += '<br><br><small>' + JSON.stringify(err.error) + '</small>';
+          Swal.fire('Error', msg, 'error');
+        }
       });
     } else {
       this.vehiculoService.crearVehiculo(formData).subscribe({
@@ -155,7 +160,12 @@ export class VehiculosComponent implements OnInit {
           this.cerrarModal(); 
           Swal.fire('¡Éxito!', 'Vehículo registrado correctamente', 'success');
         },
-        error: () => Swal.fire('Error', 'Error al crear. Asegúrate de que la placa no exista ya.', 'error')
+        error: (err: any) => {
+          console.error('Error de Django al CREAR Vehículo:', err?.error);
+          let msg = 'Error al crear. Asegúrate de que la placa no exista ya.';
+          if (err?.error && typeof err.error === 'object') msg += '<br><br><small>' + JSON.stringify(err.error) + '</small>';
+          Swal.fire('Error', msg, 'error');
+        }
       });
     }
   }

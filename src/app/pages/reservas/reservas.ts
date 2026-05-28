@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ReservaService, Reserva } from '../../services/reserva';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { RutaService, Ruta } from '../../services/ruta';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 declare const google: any;
@@ -27,6 +28,9 @@ export class ReservasComponent implements OnInit {
   mostrarModal = false;
   reservaActual: any = {};
   
+  unidadPeso: 'kg' | 'qq' = 'kg';
+  inputPesoLocal: number = 0;
+  
   fechaMinima: string = ''; 
   marcadorOrigen: any = null; 
   tiempoConduccionPura: number = 0;
@@ -42,9 +46,11 @@ export class ReservasComponent implements OnInit {
   constructor(
     private reservaService: ReservaService,
     private clienteService: ClienteService,
+    private rutaService: RutaService,
+    private exportService: ExportService,
     private route: ActivatedRoute, 
     private ngZone: NgZone,
-    @Inject(PLATFORM_ID) private platformId: Object // <-- ¡Coma arreglada aquí!
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.fechaMinima = new Date().toISOString().split('T')[0];
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -125,6 +131,72 @@ export class ReservasComponent implements OnInit {
     return this.reservas.filter(r => evaluarFiltrosDinámicos(r, this.reglasActivas));
   }
 
+  // --- LOGICA DE PESOS Y CONVERSIONES ---
+  get pesoEnKg(): number {
+    return this.unidadPeso === 'kg' ? this.inputPesoLocal : this.inputPesoLocal * 45;
+  }
+
+  cambiarUnidadPeso(unidad: 'kg' | 'qq') {
+    if (this.unidadPeso === unidad) return;
+    if (unidad === 'qq') {
+      this.inputPesoLocal = parseFloat((this.inputPesoLocal / 45).toFixed(2)) || 0;
+    } else {
+      this.inputPesoLocal = parseFloat((this.inputPesoLocal * 45).toFixed(2)) || 0;
+    }
+    this.unidadPeso = unidad;
+  }
+
+  obtenerQuintales(pesoKg: number): number {
+    return pesoKg ? parseFloat((pesoKg / 45).toFixed(2)) : 0;
+  }
+
+  // --- REPORTES Y FACTURACIÓN ---
+  async exportar(tipo: 'pdf' | 'excel'): Promise<void> {
+    const { value: nombreArchivo } = await Swal.fire({
+      title: `Exportar a ${tipo.toUpperCase()}`,
+      input: 'text',
+      inputLabel: 'Nombre del archivo',
+      inputValue: `Reporte_de_Reservas_${new Date().getTime()}`,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) return '¡Necesitas escribir un nombre!';
+        return null;
+      }
+    });
+
+    if (nombreArchivo) {
+      const columnas = [
+        { header: 'Código', key: 'codigo_reserva' },
+        { header: 'Cliente', key: 'cliente_detalles.razon_social' },
+        { header: 'Origen', key: 'direccion_origen' },
+        { header: 'Destino', key: 'direccion_destino' },
+        { header: 'Peso Carga', key: 'peso_export' },
+        { header: 'Estado', key: 'estado_nombre' },
+        { header: 'Fecha Solicitada', key: 'fecha_tentativa_viaje' }
+      ];
+
+      const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+
+      const datosProcesados = this.filtrados.map(r => ({
+        ...r,
+        peso_export: `${r.peso_estimado_kg} Kg (${this.obtenerQuintales(r.peso_estimado_kg)} qq)`
+      }));
+
+      if (tipo === 'excel') {
+        this.exportService.exportarExcel(datosProcesados, columnas, nombreArchivo, autor);
+      } else {
+        this.exportService.exportarPDF(datosProcesados, columnas, 'Reporte de Reservas y Cargas', nombreArchivo, autor);
+      }
+      Swal.fire('Éxito', `Reporte ${tipo.toUpperCase()} generado.`, 'success');
+    }
+  }
+
+  generarFactura(reserva: Reserva): void {
+    const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+    this.exportService.generarFactura(reserva, autor);
+    Swal.fire('Éxito', 'Factura descargada con éxito.', 'success');
+  }
+
   abrirModalConFecha(fecha: string): void {
     this.abrirModal();
     this.reservaActual.fecha_tentativa_viaje = fecha;
@@ -145,6 +217,8 @@ export class ReservasComponent implements OnInit {
       estado_reserva: 1
     };
     this.tiempoConduccionPura = 0;
+    this.unidadPeso = 'kg';
+    this.inputPesoLocal = 0;
 
     // Limpiar visualmente el mapa
     if (this.directionsRenderer) {
@@ -351,29 +425,53 @@ export class ReservasComponent implements OnInit {
 
   // --- GUARDAR O ACTUALIZAR RESERVA ---
   guardar(): void {
+    // Aplicamos la conversión a Kg final
+    this.reservaActual.peso_estimado_kg = Number(this.pesoEnKg);
+
+    // Limpiamos los campos anidados que Django podría rechazar
+    const payload = { ...this.reservaActual };
+    delete payload.cliente_detalles;
+    delete payload.ruta_macro_detalles;
+    delete payload.estado_nombre;
+    delete payload.fecha_creacion;
+    delete payload.peso_export; // por si acaso
+    if (typeof payload.cliente === 'object' && payload.cliente !== null) {
+      payload.cliente = payload.cliente.id;
+    }
+
     // Si la reserva NO tiene código, significa que es NUEVA
-    if (!this.reservaActual.codigo_reserva) {
-      this.reservaActual.codigo_reserva = 'RES-' + Math.floor(Math.random() * 1000000);
-      this.reservaActual.estado_reserva = 1; // 1 = Pendiente
+    if (!payload.codigo_reserva) {
+      payload.codigo_reserva = 'RES-' + Math.floor(Math.random() * 1000000);
+      payload.estado_reserva = 1; // 1 = Pendiente
       
-      this.reservaService.crearReserva(this.reservaActual).subscribe({
+      this.reservaService.crearReserva(payload).subscribe({
         next: () => {
           this.cargarDatos();
           this.mostrarModal = false;
           Swal.fire('¡Éxito!', 'Reserva creada con éxito', 'success');
         },
-        error: (err) => Swal.fire('Error', 'Error al crear la reserva', 'error')
+        error: (err) => {
+          console.error('Error de Django al CREAR:', err.error);
+          Swal.fire('Error', 'Error al crear la reserva. Revisa la consola.', 'error');
+        }
       });
       
     } else {
       // Si la reserva YA TIENE código, significa que la estamos EDITANDO
-      this.reservaService.actualizarReserva(this.reservaActual.codigo_reserva, this.reservaActual).subscribe({
+      this.reservaService.actualizarReserva(payload.codigo_reserva, payload).subscribe({
         next: () => {
           this.cargarDatos();
           this.mostrarModal = false;
           Swal.fire('¡Éxito!', 'Reserva actualizada con éxito', 'success');
         },
-        error: (err) => Swal.fire('Error', 'Error al actualizar la reserva', 'error')
+        error: (err) => {
+          console.error('Error de Django al ACTUALIZAR:', err.error);
+          let mensaje = 'Error al actualizar la reserva.';
+          if (err.error && typeof err.error === 'object') {
+            mensaje += ' Detalles: ' + JSON.stringify(err.error);
+          }
+          Swal.fire('Error', mensaje, 'error');
+        }
       });
     }
   }
@@ -391,6 +489,8 @@ export class ReservasComponent implements OnInit {
       this.reservaActual.cliente = this.reservaActual.cliente.id;
     }
 
+    this.unidadPeso = 'kg';
+    this.inputPesoLocal = this.reservaActual.peso_estimado_kg || 0;
     this.mostrarModal = true;
     
     if (this.isBrowser) {

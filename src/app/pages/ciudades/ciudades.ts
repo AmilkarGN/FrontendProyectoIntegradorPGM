@@ -2,6 +2,7 @@ import { Component, OnInit, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CiudadService, Ciudad } from '../../services/ciudad';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 declare const google: any;
@@ -24,6 +25,7 @@ export class CiudadesComponent implements OnInit {
   // 1. INYECTAMOS NgZone en el constructor
   constructor(
     private ciudadService: CiudadService,
+    private exportService: ExportService,
     private ngZone: NgZone 
   ) {}
 
@@ -56,6 +58,44 @@ export class CiudadesComponent implements OnInit {
       const searchStr = `${c.nombre} ${c.region_estado} ${c.pais}`.toLowerCase();
       return searchStr.includes(term);
     });
+  }
+
+  // --- REPORTES ---
+  async exportar(tipo: 'pdf' | 'excel'): Promise<void> {
+    const { value: nombreArchivo } = await Swal.fire({
+      title: `Exportar a ${tipo.toUpperCase()}`,
+      input: 'text',
+      inputLabel: 'Nombre del archivo',
+      inputValue: `Reporte_Bases_Operativas_${new Date().getTime()}`,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) return '¡Necesitas escribir un nombre!';
+        return null;
+      }
+    });
+
+    if (nombreArchivo) {
+      const columnas = [
+        { header: 'ID', key: 'id' },
+        { header: 'Nombre Base / Ciudad', key: 'nombre' },
+        { header: 'País de Operación', key: 'pais' },
+        { header: 'Estado', key: 'activo' }
+      ];
+
+      const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+
+      const datosProcesados = this.filtrados.map((c: any) => ({
+        ...c,
+        activo: !c.fecha_eliminacion ? 'Activa' : 'Inactiva'
+      }));
+
+      if (tipo === 'excel') {
+        this.exportService.exportarExcel(datosProcesados, columnas, nombreArchivo, autor);
+      } else {
+        this.exportService.exportarPDF(datosProcesados, columnas, 'Reporte de Bases Operativas y Ciudades', nombreArchivo, autor);
+      }
+      Swal.fire('Éxito', `Reporte ${tipo.toUpperCase()} generado.`, 'success');
+    }
   }
 
   alternarPapelera(): void {
@@ -127,15 +167,37 @@ export class CiudadesComponent implements OnInit {
       return; 
     }
 
-    if (this.ciudadActual.id) {
-      this.ciudadService.actualizarCiudad(this.ciudadActual.id, this.ciudadActual).subscribe({
-        next: () => { this.cargarCiudades(); this.cerrarModal(); },
-        error: (err) => console.error('Error al actualizar:', err)
+    const payload: any = { ...this.ciudadActual };
+    delete payload.activo;
+    delete payload.eliminado_por_nombre;
+
+    if (payload.id) {
+      this.ciudadService.actualizarCiudad(payload.id, payload).subscribe({
+        next: () => { 
+          this.cargarCiudades(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Ciudad actualizada.', 'success');
+        },
+        error: (err) => {
+          console.error('Error de Django en actualizar Ciudad:', err.error);
+          let msg = 'Error al actualizar la ciudad.';
+          if (err.error && typeof err.error === 'object') msg += ' Detalles: ' + JSON.stringify(err.error);
+          Swal.fire('Error', msg, 'error');
+        }
       });
     } else {
-      this.ciudadService.crearCiudad(this.ciudadActual).subscribe({
-        next: () => { this.cargarCiudades(); this.cerrarModal(); },
-        error: (err) => console.error('Error al crear:', err)
+      this.ciudadService.crearCiudad(payload).subscribe({
+        next: () => { 
+          this.cargarCiudades(); 
+          this.cerrarModal(); 
+          Swal.fire('¡Éxito!', 'Ciudad creada.', 'success');
+        },
+        error: (err) => {
+          console.error('Error de Django en crear Ciudad:', err.error);
+          let msg = 'Error al crear la ciudad.';
+          if (err.error && typeof err.error === 'object') msg += ' Detalles: ' + JSON.stringify(err.error);
+          Swal.fire('Error', msg, 'error');
+        }
       });
     }
   }

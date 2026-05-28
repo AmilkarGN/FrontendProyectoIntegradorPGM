@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ViajeService } from '../../services/viaje';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
@@ -52,9 +53,10 @@ export class ViajesComponent implements OnInit {
   kpiViajes: any = null;
 
   constructor(
-  private viajeService: ViajeService,
-  private route: ActivatedRoute,
-  private http: HttpClient
+    private viajeService: ViajeService,
+    private route: ActivatedRoute,
+    private exportService: ExportService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -130,6 +132,47 @@ export class ViajesComponent implements OnInit {
 
   get filtrados(): any[] {
     return this.viajes.filter(v => evaluarFiltrosDinámicos(v, this.reglasActivas));
+  }
+
+  // --- REPORTES ---
+  async exportar(tipo: 'pdf' | 'excel'): Promise<void> {
+    const { value: nombreArchivo } = await Swal.fire({
+      title: `Exportar a ${tipo.toUpperCase()}`,
+      input: 'text',
+      inputLabel: 'Nombre del archivo',
+      inputValue: `Reporte_Viajes_Asignados_${new Date().getTime()}`,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) return '¡Necesitas escribir un nombre!';
+        return null;
+      }
+    });
+
+    if (nombreArchivo) {
+      const columnas = [
+        { header: 'Cod. Viaje', key: 'codigo_viaje' },
+        { header: 'Conductor', key: 'conductor_nombre' },
+        { header: 'Placa', key: 'vehiculo_placa' },
+        { header: 'Estado', key: 'estado_nombre' },
+        { header: 'Cargas (Reservas)', key: 'reservas_detalle.length' },
+        { header: 'Fecha Salida', key: 'fecha_salida' }
+      ];
+
+      const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+
+      // Pre-calcular longitud de reservas para la exportación
+      const datosProcesados = this.filtrados.map(v => ({
+        ...v,
+        'reservas_detalle.length': v.reservas_detalle ? v.reservas_detalle.length : 0
+      }));
+
+      if (tipo === 'excel') {
+        this.exportService.exportarExcel(datosProcesados, columnas, nombreArchivo, autor);
+      } else {
+        this.exportService.exportarPDF(datosProcesados, columnas, 'Reporte de Viajes y Despachos', nombreArchivo, autor);
+      }
+      this.mostrarMensaje(`Reporte ${tipo.toUpperCase()} generado.`, 'success');
+    }
   }
 
   // --- INTELIGENCIA DE NEGOCIO ---
@@ -229,24 +272,41 @@ alSeleccionarVehiculo() {
       this.mostrarMensaje('Falta información obligatoria.', 'error'); return;
     }
 
+    const payload = { ...this.nuevoViaje };
+    // Limpiamos datos que puedan causar conflictos (aunque en viajes nuevoViaje parece ser un objeto limpio)
+    delete payload.conductor_nombre;
+    delete payload.vehiculo_placa;
+    delete payload.estado_nombre;
+    delete payload.reservas_detalle;
+
     if (this.esEdicion) {
-      this.viajeService.actualizarViaje(this.nuevoViaje.codigo_viaje, this.nuevoViaje).subscribe({
+      this.viajeService.actualizarViaje(payload.codigo_viaje, payload).subscribe({
         next: () => {
           this.mostrarMensaje('Viaje actualizado correctamente.', 'success');
           this.mostrarModalViaje = false;
           this.cargarViajes();
         },
-        error: () => this.mostrarMensaje('Error al actualizar.', 'error')
+        error: (err) => {
+          console.error('Error al ACTUALIZAR Viaje:', err.error);
+          let msg = 'Error al actualizar.';
+          if (err.error && typeof err.error === 'object') msg += ' Detalles: ' + JSON.stringify(err.error);
+          this.mostrarMensaje(msg, 'error');
+        }
       });
     } else {
-      this.viajeService.crearViaje(this.nuevoViaje).subscribe({
+      this.viajeService.crearViaje(payload).subscribe({
         next: () => {
           this.mostrarMensaje('Viaje despachado.', 'success');
           this.mostrarModalViaje = false;
           this.cargarViajes();
           this.cargarDatosMaestros(); 
         },
-        error: () => this.mostrarMensaje('Error al crear el viaje.', 'error')
+        error: (err) => {
+          console.error('Error al CREAR Viaje:', err.error);
+          let msg = 'Error al crear el viaje.';
+          if (err.error && typeof err.error === 'object') msg += ' Detalles: ' + JSON.stringify(err.error);
+          this.mostrarMensaje(msg, 'error');
+        }
       });
     }
   }

@@ -195,7 +195,13 @@ guardarConductor(form: any): void {
 
   // Sanitiza los datos y los envía a Django
   private ejecutarGuardado(): void {
-    const payload = { ...this.conductorActual };
+    const payload: any = { ...this.conductorActual };
+
+    // Limpiamos campos relacionales que vienen del GET
+    delete payload.usuario_nombre;
+    delete payload.categoria_nombre;
+    delete payload.fecha_eliminacion;
+    delete payload.eliminado_por_nombre;
 
     // TRUCO DE SANITIZACIÓN: Django rechaza strings vacíos en opciones fijas
     if (payload.grupo_sanguineo === '') payload.grupo_sanguineo = null;
@@ -225,6 +231,7 @@ guardarConductor(form: any): void {
 
   // Procesa los errores exactos que devuelve Django
   private mostrarErrorBackend(err: any): void {
+    console.error('Error Django en Conductor:', err?.error);
     let msg = 'Verifica los datos proporcionados.';
     
     if (err.error && typeof err.error === 'object') {
@@ -232,6 +239,7 @@ guardarConductor(form: any): void {
       if (errores.length > 0) {
         msg = errores.join('<br>');
       }
+      msg += '<br><br><small>' + JSON.stringify(err.error) + '</small>';
     }
     
     Swal.fire('Error del Servidor', msg, 'error');
