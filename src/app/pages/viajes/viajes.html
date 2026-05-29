@@ -2,6 +2,7 @@
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Control de Viajes y Despachos</h2>
     <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="abrirGuiaEstados()" title="Manual de Estados">ℹ️ Guía de Estados</button>
       <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" (click)="exportar('pdf')">📄 PDF</button>
       <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" (click)="exportar('excel')">📊 Excel</button>
       <button class="btn-action btn-add" (click)="abrirModalViaje()">+ Programar Viaje</button>
@@ -24,15 +25,20 @@
       <thead>
         <tr>
           <th>ID Viaje</th>
-          <th>Ruta / Destino</th>
-          <th>Equipo Asignado</th>
-          <th>Estado Actual</th>
-          <th>Acciones Rápidas</th>
+          <th>Equipo y Cargas</th>
+          <th>Fechas</th>
+          <th style="text-align: center;">Estado Actual</th>
+          <th style="text-align: center;">Acciones Rápidas</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let v of filtrados">
-          <td><strong>{{ v.codigo_viaje }}</strong></td>
+        <tr *ngFor="let v of filtrados" [class.highlight-row]="alertaDestacada === v.codigo_viaje">
+          <td>
+            <strong>
+              {{ v.codigo_viaje }}
+              <span *ngIf="alertaDestacada === v.codigo_viaje" class="material-symbols-rounded alert-icon" title="¡Este registro requiere atención!">info</span>
+            </strong>
+          </td>
           <td>
             <span class="badge badge-unidad">{{ v.vehiculo_placa }}</span>
             <span class="badge-unidad" style="background: #e0f2fe; color: #0369a1; margin-left: 5px;">📦 {{ v.reservas_detalle?.length || 0 }} Cargas</span><br>
@@ -43,8 +49,13 @@
             <div class="text-fecha"><strong>Llegada:</strong> {{ v.fecha_llegada_estimada ? (v.fecha_llegada_estimada | date:'short') : 'Por definir' }}</div>
           </td>
           <td>
-            <!-- Fíjate que cambié [ngModel]="v.estado_viaje" por v.estado_viaje_id -->
-            <select [ngModel]="v.estado_viaje_id || v.estado_viaje" (ngModelChange)="cambiarEstadoViaje(v, $event)" class="select-estado">
+            <select [ngModel]="v.estado_viaje_id || v.estado_viaje" (ngModelChange)="cambiarEstadoViaje(v, $event)" 
+                    class="status-select"
+                    [ngClass]="{
+                      'status-disponible': v.estado_nombre === 'Finalizado' || v.estado_nombre === 'Programado',
+                      'status-ruta': v.estado_nombre === 'En Curso',
+                      'status-taller': v.estado_nombre === 'Averiado en viaje' || v.estado_nombre === 'Cancelado'
+                    }">
               <option *ngFor="let e of estados" [value]="e.id">{{ e.nombre }}</option>
             </select>
           </td>
@@ -157,7 +168,29 @@
     <div class="crud-modal slide-in-bottom modal-lg">
       <div class="modal-header flex-between">
         <h3>📍 Hoja de Ruta: <span class="text-primary">{{ viajeSeleccionado?.codigo_viaje }}</span></h3>
-        <span class="badge badge-success">{{ viajeSeleccionado?.estado_nombre }}</span>
+        <span class="badge" [ngClass]="viajeSeleccionado?.estado_nombre === 'Averiado en viaje' ? 'badge-taller' : 'badge-success'">{{ viajeSeleccionado?.estado_nombre }}</span>
+      </div>
+
+      <!-- TIMELINE / STEPPER DE ESTADOS -->
+      <div class="viaje-stepper">
+        <div class="step" [ngClass]="{'active': true, 'completed': getStepIndex(viajeSeleccionado?.estado_nombre) > 0}">
+          <div class="step-icon">📋</div>
+          <p>Programado</p>
+        </div>
+        <div class="step-line" [ngClass]="{'completed-line': getStepIndex(viajeSeleccionado?.estado_nombre) > 0, 'error-line': viajeSeleccionado?.estado_nombre === 'Averiado en viaje' || viajeSeleccionado?.estado_nombre === 'Cancelado'}"></div>
+        <div class="step" [ngClass]="{'active': getStepIndex(viajeSeleccionado?.estado_nombre) >= 1, 'completed': getStepIndex(viajeSeleccionado?.estado_nombre) > 1, 'error-step': viajeSeleccionado?.estado_nombre === 'Averiado en viaje'}">
+          <div class="step-icon">{{ viajeSeleccionado?.estado_nombre === 'Averiado en viaje' ? '⚠️' : '🚚' }}</div>
+          <p>{{ viajeSeleccionado?.estado_nombre === 'Averiado en viaje' ? 'Averiado' : 'En Curso' }}</p>
+        </div>
+        <div class="step-line" [ngClass]="{'completed-line': getStepIndex(viajeSeleccionado?.estado_nombre) > 1, 'hidden-line': viajeSeleccionado?.estado_nombre === 'Cancelado'}"></div>
+        <div class="step" *ngIf="viajeSeleccionado?.estado_nombre !== 'Cancelado'" [ngClass]="{'active': getStepIndex(viajeSeleccionado?.estado_nombre) >= 2}">
+          <div class="step-icon">✅</div>
+          <p>Finalizado</p>
+        </div>
+        <div class="step" *ngIf="viajeSeleccionado?.estado_nombre === 'Cancelado'" class="step error-step active">
+          <div class="step-icon">❌</div>
+          <p>Cancelado</p>
+        </div>
       </div>
       
       <div class="grid-detalles-mapa">
@@ -250,5 +283,67 @@
   <div *ngIf="mostrarToast" class="toast-notification show" [ngClass]="{'success': tipoToast === 'success', 'error': tipoToast === 'error'}">
     <span class="toast-icon">{{ tipoToast === 'success' ? '✅' : '⚠️' }}</span>
     <span class="toast-message">{{ mensajeToast }}</span>
+  </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarGuiaEstados">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header">
+        <h3>ℹ️ Mapa Visual de Estados: VIAJES</h3>
+      </div>
+      <div class="guia-contenido" style="line-height: 1.6; color: #334155;">
+        <p>El estado del Viaje actúa como el <strong>cerebro de la operación</strong>. Al avanzar el viaje, el sistema mueve automáticamente al Conductor, Vehículo y Reserva.</p>
+        
+        <div class="flow-guide">
+          <!-- Nodo 1 -->
+          <div class="flow-node">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>
+            <span class="node-title">Programado</span>
+            <span class="node-desc">Recursos reservados, en espera de salida.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <!-- Nodo 2 -->
+          <div class="flow-node node-primary">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l3 3v6h-3m-12 0H5m3 0a3 3 0 11-6 0m6 0a3 3 0 106 0m-6 0h6m6 0a3 3 0 11-6 0m6 0h3v-6"/></svg></span>
+            <span class="node-title">En Curso</span>
+            <span class="node-desc">¡En movimiento! Todo el equipo pasa a "En Ruta".</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <!-- Nodo 3 -->
+          <div class="flow-node node-success">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+            <span class="node-title">Finalizado</span>
+            <span class="node-desc">Entrega exitosa. Vehículo y chofer liberados.</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 15px 0;">
+          <strong style="color: #64748b; font-size: 0.9rem;">DESVÍOS DE CONTINGENCIA</strong>
+        </div>
+
+        <div class="flow-guide" style="background: #fef2f2; border-color: #fecaca;">
+          <div class="flow-node node-danger">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>
+            <span class="node-title">Averiado en viaje</span>
+            <span class="node-desc">Emergencia. El equipo queda retenido en ruta. La reserva pasa a contingencia.</span>
+          </div>
+          
+          <span class="flow-arrow" style="color: #fca5a5; font-size: 0.8rem; font-weight: normal;">O BIEN</span>
+
+          <div class="flow-node node-neutral">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg></span>
+            <span class="node-title">Cancelado</span>
+            <span class="node-desc">Viaje abortado. Se liberan los recursos asignados sin finalizar entrega.</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-save w-100" (click)="mostrarGuiaEstados = false">Entendido</button>
+      </div>
+    </div>
   </div>
 </div>

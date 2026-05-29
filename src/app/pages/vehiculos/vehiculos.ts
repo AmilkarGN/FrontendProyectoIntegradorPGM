@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { 
   VehiculoService, Vehiculo, ModeloVehiculo, 
-  TipoVehiculo, EstadoVehiculo 
+  TipoVehiculo 
 } from '../../services/vehiculo';
+import { ViajeService } from '../../services/viaje';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 
@@ -21,7 +23,7 @@ export class VehiculosComponent implements OnInit {
   vehiculos: Vehiculo[] = [];
   modelos: ModeloVehiculo[] = [];
   tipos: TipoVehiculo[] = [];
-  estados: EstadoVehiculo[] = [];
+  estados: string[] = ['Disponible', 'En Ruta', 'En Taller', 'Averiado en viaje'];
 
   cargando = true;
   mostrarModal = false;
@@ -40,13 +42,25 @@ export class VehiculosComponent implements OnInit {
   
   kpiVehiculos: any = null;
   viendoPapelera = false;
+  alertaDestacada: string | null = null;
+
+  mostrarGuiaEstados: boolean = false;
 
   constructor(
     private vehiculoService: VehiculoService,
-    private http: HttpClient
+    private viajeService: ViajeService,
+    private http: HttpClient,
+    private route: ActivatedRoute
   ) {}
 
+  abrirGuiaEstados() {
+    this.mostrarGuiaEstados = true;
+  }
+
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['alerta']) this.alertaDestacada = String(params['alerta']);
+    });
     this.cargarDatosIniciales();
   }
 
@@ -54,7 +68,7 @@ export class VehiculosComponent implements OnInit {
     this.cargando = true;
     this.vehiculoService.obtenerModelos().subscribe(m => this.modelos = m);
     this.vehiculoService.obtenerTipos().subscribe(t => this.tipos = t);
-    this.vehiculoService.obtenerEstados().subscribe(e => this.estados = e);
+
     this.cargarVehiculos();
     
     // Cargar KPIs
@@ -73,6 +87,124 @@ export class VehiculosComponent implements OnInit {
   alternarPapelera(estado: boolean) {
     this.viendoPapelera = estado;
     this.cargarVehiculos();
+  }
+
+  // --- CAMBIO DE ESTADO RÁPIDO DESDE LA TABLA ---
+  cambiarEstadoRapido(vehiculo: Vehiculo, event: Event) {
+    const selectElement = event.target as HTMLSelectElement;
+    const nuevoEstado = selectElement.value;
+    const estadoOriginal = vehiculo.estado;
+
+    // 1. Verificamos si está en un viaje activo
+    this.viajeService.obtenerViajes().subscribe(viajes => {
+      const enViajeActivo = viajes.some(v => 
+        v.vehiculo_placa === vehiculo.placa &&
+        v.estado_nombre !== 'Finalizado' && 
+        v.estado_nombre !== 'Cancelado'
+      );
+
+      if (enViajeActivo) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Acción Bloqueada',
+          text: `No puedes cambiar el estado del vehículo ${vehiculo.placa} porque actualmente se encuentra en un viaje activo.`
+        });
+        // Revertir el modelo de Angular y el select visualmente
+        setTimeout(() => {
+          vehiculo.estado = estadoOriginal;
+          selectElement.value = estadoOriginal;
+        });
+        return;
+      }
+
+      // 2. Si no está en viaje, procedemos con el cambio en el backend
+      const estadosInactivos = ['En Taller', 'Averiado en viaje'];
+
+      const ejecutarCambio = () => {
+        const payload = new FormData();
+        payload.append('estado', nuevoEstado);
+        
+        this.vehiculoService.actualizarVehiculo(vehiculo.placa, payload).subscribe({
+          next: (res) => {
+            vehiculo.estado = nuevoEstado;
+            // Eliminamos estado_detalles porque ya no se usa
+            vehiculo.estado_detalles = null;
+            
+            Swal.fire({
+              toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+              icon: 'success', title: 'Estado actualizado correctamente'
+            });
+          },
+          error: (err) => {
+            console.error('Error al cambiar estado:', err);
+            setTimeout(() => {
+              vehiculo.estado = estadoOriginal;
+              selectElement.value = estadoOriginal;
+            });
+            Swal.fire('Error', 'No se pudo actualizar el estado.', 'error');
+          }
+        });
+      };
+
+      if (estadosInactivos.includes(nuevoEstado)) {
+        Swal.fire({
+          title: `¿Cambiar estado a ${nuevoEstado}?`,
+          text: '¿Está seguro de que desea cambiar el estado del vehículo?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#eab308',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Sí, continuar',
+          cancelButtonText: 'Cancelar'
+        }).then((result1) => {
+          if (result1.isConfirmed) {
+            // Buscamos si tiene un conductor asignado
+            this.http.get<any[]>(`http://localhost:8000/api/asignaciones/?vehiculo=${vehiculo.placa}&esta_activa=true`).subscribe(asignaciones => {
+              const activas = asignaciones.filter(a => a.vehiculo === vehiculo.placa && a.esta_activa);
+              
+              if (activas.length > 0) {
+                const asignacionActiva = activas[0];
+                Swal.fire({
+                  title: '¿Desvincular Conductor?',
+                  text: 'El vehículo tiene un conductor asignado. ¿Desea desvincular al conductor para que pueda tomar otro vehículo, o mantener la vinculación?',
+                  icon: 'question',
+                  showCancelButton: true,
+                  confirmButtonColor: '#ef4444',
+                  cancelButtonColor: '#3b82f6',
+                  confirmButtonText: 'Desvincular',
+                  cancelButtonText: 'Mantener'
+                }).then((result2) => {
+                  if (result2.isConfirmed) {
+                    const patchPayload = { esta_activa: false, fecha_devolucion: new Date().toISOString().split('T')[0] };
+                    this.http.patch(`http://localhost:8000/api/asignaciones/${asignacionActiva.id}/`, patchPayload).subscribe({
+                      next: () => {
+                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Conductor desvinculado.' });
+                        ejecutarCambio();
+                      },
+                      error: () => {
+                        Swal.fire('Aviso', 'Error al desvincular el conductor.', 'error');
+                        ejecutarCambio();
+                      }
+                    });
+                  } else {
+                    ejecutarCambio();
+                  }
+                });
+              } else {
+                ejecutarCambio();
+              }
+            });
+          } else {
+            setTimeout(() => {
+              vehiculo.estado = estadoOriginal;
+              selectElement.value = estadoOriginal;
+            });
+          }
+        });
+      } else {
+        ejecutarCambio();
+      }
+    });
   }
 
   onFileSelected(event: any): void {

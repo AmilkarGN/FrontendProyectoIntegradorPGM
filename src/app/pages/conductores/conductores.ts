@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ConductorService, Conductor, CategoriaLicencia } from '../../services/conductor';
 import { UsuarioService, Usuario } from '../../services/usuario';
@@ -19,6 +20,8 @@ export class ConductoresComponent implements OnInit {
   conductores: Conductor[] = [];
   usuarios: Usuario[] = [];
   categorias: CategoriaLicencia[] = [];
+  usuariosDisponibles: Usuario[] = [];
+  estados: string[] = ['Disponible', 'En Ruta', 'Vacaciones', 'Baja Medica', 'Permiso', 'Descanso', 'Vehículo averiado'];
   
   cargando = true;
   mostrarModal = false;
@@ -26,20 +29,29 @@ export class ConductoresComponent implements OnInit {
   
   fechaHoy: string = new Date().toISOString().split('T')[0];
   fechaMenos18Anios: string = new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0];
-  usuariosDisponibles: Usuario[] = [];
   conductorActual: Conductor | any = {}; 
   baseMediaUrl = 'http://localhost:8000';
   
   kpiConductores: any = null;
   filtroDisponibilidad: string = '';
+  alertaDestacada: string | null = null;
+  mostrarGuiaEstados: boolean = false;
 
   constructor(
     private conductorService: ConductorService,
     private usuarioService: UsuarioService,
-    private http: HttpClient
+    private http: HttpClient,
+    private route: ActivatedRoute
   ) {}
 
+  abrirGuiaEstados() {
+    this.mostrarGuiaEstados = true;
+  }
+
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['alerta']) this.alertaDestacada = String(params['alerta']);
+    });
     this.cargarDatosIniciales();
   }
 
@@ -277,5 +289,96 @@ guardarConductor(form: any): void {
   obtenerImagenUrl(url: string | undefined): string {
     if (!url) return 'assets/images/icono.png';
     return url.startsWith('http') ? url : `${this.baseMediaUrl}${url}`;
+  }
+
+  cambiarEstadoRapido(conductor: any, event: Event) {
+    const selectElement = event.target as HTMLSelectElement;
+    const nuevoEstado = selectElement.value;
+    const estadoOriginal = conductor.estado;
+    const estadosInactivos = ['Vacaciones', 'Baja Medica', 'Permiso'];
+
+    const ejecutarCambio = () => {
+      const payload = { estado: nuevoEstado };
+      
+      this.conductorService.patchConductor(conductor.id, payload).subscribe({
+        next: () => {
+          conductor.estado = nuevoEstado;
+          Swal.fire({
+            toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+            icon: 'success', title: 'Estado actualizado correctamente'
+          });
+        },
+        error: (err) => {
+          console.error('Error al cambiar estado:', err);
+          setTimeout(() => {
+            conductor.estado = estadoOriginal;
+            selectElement.value = estadoOriginal;
+          });
+          Swal.fire('Error', 'No se pudo actualizar el estado.', 'error');
+        }
+      });
+    };
+
+    if (estadosInactivos.includes(nuevoEstado)) {
+      Swal.fire({
+        title: `¿Cambiar estado a ${nuevoEstado}?`,
+        text: '¿Está seguro de que desea cambiar el estado del conductor?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#eab308',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar'
+      }).then((result1) => {
+        if (result1.isConfirmed) {
+          // Buscamos si tiene un vehículo asignado
+          this.http.get<any[]>(`http://localhost:8000/api/asignaciones/?conductor=${conductor.id}&esta_activa=true`).subscribe(asignaciones => {
+            // Ajustamos según la respuesta del backend (puede venir directo array o filtrarse)
+            const activas = asignaciones.filter(a => a.conductor === conductor.id && a.esta_activa);
+            
+            if (activas.length > 0) {
+              const asignacionActiva = activas[0];
+              Swal.fire({
+                title: '¿Desvincular Vehículo?',
+                text: 'El conductor tiene un vehículo asignado. ¿Desea desvincular el vehículo asignado para liberarlo, o mantener la vinculación?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#3b82f6',
+                confirmButtonText: 'Desvincular',
+                cancelButtonText: 'Mantener'
+              }).then((result2) => {
+                if (result2.isConfirmed) {
+                  // Desvincular
+                  const patchPayload = { esta_activa: false, fecha_devolucion: new Date().toISOString().split('T')[0] };
+                  this.http.patch(`http://localhost:8000/api/asignaciones/${asignacionActiva.id}/`, patchPayload).subscribe({
+                    next: () => {
+                      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Vehículo desvinculado.' });
+                      ejecutarCambio();
+                    },
+                    error: () => {
+                      Swal.fire('Aviso', 'Error al desvincular el vehículo. Ver consola.', 'error');
+                      ejecutarCambio();
+                    }
+                  });
+                } else {
+                  ejecutarCambio(); // Mantiene vinculación
+                }
+              });
+            } else {
+              ejecutarCambio(); // No tiene asignaciones activas
+            }
+          });
+        } else {
+          // Revertir el Select si se cancela el modal
+          setTimeout(() => {
+            conductor.estado = estadoOriginal;
+            selectElement.value = estadoOriginal;
+          });
+        }
+      });
+    } else {
+      ejecutarCambio(); // Cambios normales
+    }
   }
 }

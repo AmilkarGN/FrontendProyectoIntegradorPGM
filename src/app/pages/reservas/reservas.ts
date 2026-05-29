@@ -6,6 +6,8 @@ import { ReservaService, Reserva } from '../../services/reserva';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { RutaService, Ruta } from '../../services/ruta';
 import { ExportService } from '../../services/export.service';
+import { ConfiguracionService, ConfiguracionSistema } from '../../services/configuracion.service';
+import { ViajeService } from '../../services/viaje';
 import Swal from 'sweetalert2';
 
 declare const google: any;
@@ -25,6 +27,8 @@ export class ReservasComponent implements OnInit {
   modoModal: 'crear' | 'ver' = 'crear';
   reservas: Reserva[] = [];
   clientes: Cliente[] = [];
+  viajesProgramados: any[] = [];
+  configuracionGlobal: ConfiguracionSistema | null = null;
   mostrarModal = false;
   reservaActual: any = {};
   
@@ -48,6 +52,8 @@ export class ReservasComponent implements OnInit {
     private clienteService: ClienteService,
     private rutaService: RutaService,
     private exportService: ExportService,
+    private configuracionService: ConfiguracionService,
+    private viajeService: ViajeService,
     private route: ActivatedRoute, 
     private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -56,7 +62,17 @@ export class ReservasComponent implements OnInit {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
 
+  alertaDestacada: string | null = null;
+  mostrarGuiaEstados: boolean = false;
+
+  abrirGuiaEstados(): void {
+    this.mostrarGuiaEstados = true;
+  }
+
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['alerta']) this.alertaDestacada = String(params['alerta']);
+    });
     this.cargarDatos(); // Tu función normal de carga
 
     // 👈 3. EL ESCUCHADOR INTELIGENTE
@@ -105,7 +121,68 @@ export class ReservasComponent implements OnInit {
   cargarDatos(): void {
     this.reservaService.obtenerReservas().subscribe(data => this.reservas = data);
     this.clienteService.obtenerClientes().subscribe(data => this.clientes = data);
+    this.configuracionService.obtenerConfiguracion().subscribe(data => {
+      if (data && data.length > 0) {
+        this.configuracionGlobal = data[0];
+      }
+    });
+    this.viajeService.obtenerViajes().subscribe(data => this.viajesProgramados = data);
   }
+
+  // --- CONFIGURACIÓN GLOBAL DE TARIFA ---
+  async ajustarTarifaGlobal() {
+    const tarifaActual = this.configuracionGlobal ? this.configuracionGlobal.tarifa_base_qq : 20.00;
+    const { value: nuevaTarifa } = await Swal.fire({
+      title: 'Ajustar Tarifa Global',
+      text: 'Este precio base se aplicará a todas las reservas futuras.',
+      input: 'number',
+      inputValue: tarifaActual,
+      inputAttributes: { step: '0.50', min: '1' },
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (nuevaTarifa && parseFloat(nuevaTarifa) > 0) {
+      const configId = this.configuracionGlobal?.id || 1;
+      this.configuracionService.actualizarConfiguracion(configId, { tarifa_base_qq: parseFloat(nuevaTarifa) }).subscribe({
+        next: (res) => {
+          this.configuracionGlobal = res;
+          Swal.fire('Actualizado', `La nueva tarifa base es Bs. ${res.tarifa_base_qq}`, 'success');
+        },
+        error: () => Swal.fire('Error', 'No se pudo actualizar la tarifa.', 'error')
+      });
+    }
+  }
+
+  // --- ALERTA INTELIGENTE DE DISPONIBILIDAD ---
+  alertaDisponibilidad: string | null = null;
+  
+  verificarDisponibilidadFecha() {
+    if (!this.reservaActual.fecha_tentativa_viaje) {
+      this.alertaDisponibilidad = null;
+      return;
+    }
+    
+    const fechaElegida = this.reservaActual.fecha_tentativa_viaje;
+    
+    // Contar reservas en esa misma fecha
+    const reservasMismoDia = this.reservas.filter(r => r.fecha_tentativa_viaje === fechaElegida).length;
+    // Contar viajes programados en esa misma fecha (aprox por string)
+    const viajesMismoDia = this.viajesProgramados.filter(v => v.fecha_salida && v.fecha_salida.includes(fechaElegida)).length;
+    
+    const cargaTotal = reservasMismoDia + viajesMismoDia;
+    
+    // Si ya hay 3 o más, y estamos intentando meter una nueva, lanzamos la advertencia.
+    if (cargaTotal >= 3) {
+      this.alertaDisponibilidad = `⚠️ ALTA DEMANDA: Ya existen ${cargaTotal} compromisos (reservas/viajes) para el ${fechaElegida}. Te sugerimos confirmar disponibilidad de camiones antes de garantizar el servicio.`;
+    } else {
+      this.alertaDisponibilidad = null;
+    }
+  }
+
+  // --- ALERTA DE EDICIÓN DE RESERVAS EN CURSO ---
+  alertaEdicionPeligrosa: string | null = null;
 
   // --- QUERY BUILDER CONFIG ---
   columnasFiltro: ColumnaFiltrable[] = [
@@ -214,11 +291,17 @@ export class ReservasComponent implements OnInit {
       contacto_destino: 'A confirmar', 
       telefono_destino: '00000000',
       terminos_pago: 'Contado',
-      estado_reserva: 1
+      estado_reserva: 1,
+      tarifa_qq_aplicada: this.configuracionGlobal ? this.configuracionGlobal.tarifa_base_qq : 20.00,
+      tipo_descuento: 'ninguno',
+      valor_descuento: 0,
+      motivo_descuento: ''
     };
     this.tiempoConduccionPura = 0;
     this.unidadPeso = 'kg';
     this.inputPesoLocal = 0;
+    this.alertaDisponibilidad = null; // Reiniciamos alerta
+    this.alertaEdicionPeligrosa = null; // Reiniciamos alerta edición
 
     // Limpiar visualmente el mapa
     if (this.directionsRenderer) {
@@ -492,6 +575,12 @@ export class ReservasComponent implements OnInit {
     this.unidadPeso = 'kg';
     this.inputPesoLocal = this.reservaActual.peso_estimado_kg || 0;
     this.mostrarModal = true;
+    
+    if (this.reservaActual.viaje_asignado || (this.reservaActual.estado_reserva && this.reservaActual.estado_reserva > 1)) {
+      this.alertaEdicionPeligrosa = '⚠️ ATENCIÓN: Esta reserva ya está asignada a un viaje en curso o ha sido confirmada. Modificar datos como el peso o las fechas podría causar conflictos en la logística o reportes de la flota.';
+    } else {
+      this.alertaEdicionPeligrosa = null;
+    }
     
     if (this.isBrowser) {
       setTimeout(() => {

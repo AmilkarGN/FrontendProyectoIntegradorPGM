@@ -5,7 +5,6 @@ import { Observable } from 'rxjs';
 // --- INTERFACES ---
 export interface ModeloVehiculo { id: number; marca: string; nombre_modelo: string; anio: number; }
 export interface TipoVehiculo { id: number; nombre: string; capacidad_carga_kg: number; }
-export interface EstadoVehiculo { id: number; nombre: string; }
 
 export interface Vehiculo {
   placa: string; // ¡Esta es nuestra Primary Key!
@@ -13,8 +12,8 @@ export interface Vehiculo {
   modelo_detalles?: ModeloVehiculo;
   tipo: number;
   tipo_detalles?: TipoVehiculo;
-  estado: number;
-  estado_detalles?: EstadoVehiculo;
+  estado: string;
+  estado_detalles?: any;
   chasis?: string;
   color?: string;
   vencimiento_soat?: string;
@@ -46,10 +45,8 @@ export class VehiculoService {
 
   constructor(private http: HttpClient) { }
 
-  // --- DEPENDENCIAS (Para los menús desplegables) ---
   obtenerModelos(): Observable<ModeloVehiculo[]> { return this.http.get<ModeloVehiculo[]>(this.modelosUrl); }
   obtenerTipos(): Observable<TipoVehiculo[]> { return this.http.get<TipoVehiculo[]>(this.tiposUrl); }
-  obtenerEstados(): Observable<EstadoVehiculo[]> { return this.http.get<EstadoVehiculo[]>(this.estadosUrl); }
 
   // --- CRUD VEHÍCULOS (Usamos FormData para poder enviar la foto) ---
   obtenerVehiculos(eliminados: boolean = false): Observable<Vehiculo[]> { 
@@ -62,8 +59,8 @@ export class VehiculoService {
   }
   
   // OJO: El ID aquí es un string (la placa)
-  actualizarVehiculo(placa: string, datos: FormData): Observable<Vehiculo> { 
-    return this.http.put<Vehiculo>(`${this.apiUrl}${placa}/`, datos); 
+  actualizarVehiculo(placa: string, datos: FormData | any): Observable<Vehiculo> { 
+    return this.http.patch<Vehiculo>(`${this.apiUrl}${placa}/`, datos); 
   }
   
   eliminarVehiculo(placa: string): Observable<any> { 
@@ -99,14 +96,4 @@ eliminarTipo(id: number): Observable<any> {
   return this.http.delete(`${this.tiposUrl}${id}/`);
 }
 
-// --- CRUD ESTADOS ---
-crearEstado(estado: EstadoVehiculo): Observable<EstadoVehiculo> {
-  return this.http.post<EstadoVehiculo>(this.estadosUrl, estado);
-}
-actualizarEstado(id: number, estado: EstadoVehiculo): Observable<EstadoVehiculo> {
-  return this.http.put<EstadoVehiculo>(`${this.estadosUrl}${id}/`, estado);
-}
-eliminarEstado(id: number): Observable<any> {
-  return this.http.delete(`${this.estadosUrl}${id}/`);
-}
 }

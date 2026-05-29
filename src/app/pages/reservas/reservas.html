@@ -2,6 +2,8 @@
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Gestión de Reservas y Logística</h2>
     <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="abrirGuiaEstados()" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <button class="btn-action" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 10px 15px;" (click)="ajustarTarifaGlobal()" title="Ajustar Tarifa Global">⚙️ Tarifa</button>
       <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" (click)="exportar('pdf')">📄 PDF</button>
       <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" (click)="exportar('excel')">📊 Excel</button>
       <button class="btn-action btn-add" (click)="abrirModal()">+ Nueva Reserva</button>
@@ -33,8 +35,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let r of filtrados">
-        <td><strong>{{ r.codigo_reserva }}</strong></td>
+      <tr *ngFor="let r of filtrados" [class.highlight-row]="alertaDestacada === r.codigo_reserva">
+        <td>
+          <strong>
+            {{ r.codigo_reserva }}
+            <span *ngIf="alertaDestacada === r.codigo_reserva" class="material-symbols-rounded alert-icon" title="¡Este registro requiere atención!">info</span>
+          </strong>
+        </td>
         <td>{{ r.cliente_detalles?.razon_social || r.cliente_detalles?.usuario_detalles?.nombre }}</td>
         <td>
           <small>{{ r.direccion_origen }}</small><br>
@@ -47,7 +54,15 @@
           <strong>{{ r.peso_estimado_kg }} Kg</strong><br>
           <span style="color: #64748b; font-size: 0.85em;">({{ obtenerQuintales(r.peso_estimado_kg) }} qq)</span>
         </td>
-        <td><span class="badge">{{ r.estado_nombre }}</span></td>
+        <td>
+          <span class="badge" [ngClass]="{
+            'status-ruta': r.estado_nombre === 'En Tránsito',
+            'status-disponible': r.estado_nombre === 'Pendiente' || r.estado_nombre === 'Entregado' || r.estado_nombre === 'Confirmada',
+            'status-taller': r.estado_nombre === 'Cancelada' || r.estado_nombre === 'Contingencia Vehicular'
+          }" style="padding: 6px 15px; border-radius: 20px; font-weight: 700; display: inline-block;">
+            {{ r.estado_nombre }}
+          </span>
+        </td>
         <td class="actions-column">
 
           <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️ Ver</button>
@@ -68,6 +83,11 @@
       
       <div class="grid-detalles-mapa">
         <div class="col-datos form-scroll" style="max-height: 60vh; overflow-y: auto; padding-right: 15px;">
+          
+          <div *ngIf="alertaEdicionPeligrosa" style="margin-bottom: 15px; padding: 12px; background-color: #fee2e2; border-left: 5px solid #ef4444; color: #991b1b; font-size: 0.9rem; font-weight: 500; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            {{ alertaEdicionPeligrosa }}
+          </div>
+          
           <form (ngSubmit)="reservaForm.invalid ? reservaForm.control.markAllAsTouched() : guardar()" #reservaForm="ngForm">
             
             <div class="form-group">
@@ -81,7 +101,10 @@
 
             <div class="form-group">
               <label>Fecha Solicitada de Viaje *</label>
-              <input type="date" name="fecha" [(ngModel)]="reservaActual.fecha_tentativa_viaje" [min]="fechaMinima" required>
+              <input type="date" name="fecha" [(ngModel)]="reservaActual.fecha_tentativa_viaje" (ngModelChange)="verificarDisponibilidadFecha()" [min]="fechaMinima" required>
+              <div *ngIf="alertaDisponibilidad" style="margin-top: 8px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; color: #b45309; font-size: 0.85rem; font-weight: 600; border-radius: 4px;">
+                {{ alertaDisponibilidad }}
+              </div>
             </div>
 
             <div style="background: #fffbeb; border-left: 4px solid #fbbf24; padding: 8px; margin-bottom: 15px; font-size: 0.85rem; color: #92400e;">
@@ -148,6 +171,40 @@
               </div>
             </div>
 
+            <!-- SECCIÓN NUEVA: FACTURACIÓN -->
+            <h5 style="margin-top: 15px; margin-bottom: 10px; color: #4f46e5; border-bottom: 1px solid #e0e7ff; padding-bottom: 5px;">Detalles de Facturación</h5>
+            <div class="form-row" style="display: flex; gap: 15px; align-items: flex-start;">
+              <div class="form-group" style="flex: 1;">
+                <label>Tarifa Aplicada (Global)</label>
+                <div style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #475569; font-weight: 600;">
+                  {{ reservaActual.tarifa_qq_aplicada }} Bs / qq
+                </div>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Aplicar un Descuento</label>
+                <select name="tipo_descuento" [(ngModel)]="reservaActual.tipo_descuento">
+                  <option value="ninguno">Ninguno</option>
+                  <option value="porcentaje">Porcentaje (%)</option>
+                  <option value="monto_fijo">Monto Fijo (Bs)</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-row" style="display: flex; gap: 15px;" *ngIf="reservaActual.tipo_descuento !== 'ninguno'">
+              <div class="form-group" style="flex: 1;">
+                <label>
+                  Valor del Descuento
+                  <span *ngIf="reservaActual.tipo_descuento === 'porcentaje'" style="color: #4f46e5; font-weight: bold;">(%) *</span>
+                  <span *ngIf="reservaActual.tipo_descuento === 'monto_fijo'" style="color: #4f46e5; font-weight: bold;">(Bs) *</span>
+                </label>
+                <input type="number" name="valor_descuento" [(ngModel)]="reservaActual.valor_descuento" min="0" required>
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label>Motivo del Descuento (Opcional)</label>
+                <input type="text" name="motivo_descuento" [(ngModel)]="reservaActual.motivo_descuento" placeholder="Ej: Faltó carga en el viaje anterior">
+              </div>
+            </div>
+
             <div class="resumen-viaje" *ngIf="reservaActual.distancia_real_km" style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #bae6fd;">
               <h4 style="margin: 0 0 10px 0; color: #0284c7;">Análisis Logístico (Carga Pesada)</h4>
               <p style="margin: 5px 0;">🛣️ Distancia Total: <strong>{{ reservaActual.distancia_real_km }} km</strong></p>
@@ -204,6 +261,21 @@
             </div>
           </div>
 
+          <!-- NUEVO: DETALLES DE TRANSPORTE (VIAJE ASIGNADO) -->
+          <div class="card-detalle" *ngIf="reservaActual.viaje_detalles">
+            <p class="card-subtitle">TRANSPORTE ASIGNADO</p>
+            <h4 class="card-title" style="font-size: 1rem;">Viaje: <span class="text-primary">{{ reservaActual.viaje_detalles.codigo_viaje }}</span></h4>
+            <div class="crono-item"><strong>🚚 Vehículo:</strong> {{ reservaActual.viaje_detalles.vehiculo_placa || 'N/A' }}</div>
+            <div class="crono-item"><strong>👨‍💼 Conductor:</strong> {{ reservaActual.viaje_detalles.conductor_nombre || 'N/A' }}</div>
+            <div class="crono-item" *ngIf="reservaActual.estado_nombre === 'Entregado' && reservaActual.viaje_detalles.fecha_llegada_estimada">
+              <strong class="text-success">✅ Finalizado el:</strong> {{ reservaActual.viaje_detalles.fecha_llegada_estimada | date:'short' }}
+            </div>
+          </div>
+          <div class="card-detalle" *ngIf="!reservaActual.viaje_detalles && reservaActual.estado_nombre !== 'Cancelado'">
+            <p class="card-subtitle">TRANSPORTE ASIGNADO</p>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Aún no se ha programado un viaje para esta reserva.</p>
+          </div>
+
           <div class="card-detalle">
             <p class="card-subtitle">RUTA Y DISTANCIA</p>
             <div class="crono-item"><strong>A:</strong> {{ reservaActual.direccion_origen }}</div>
@@ -227,4 +299,72 @@
       </div>
     </div>
   </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarGuiaEstados">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header">
+        <h3>ℹ️ Mapa Visual de Estados: RESERVAS</h3>
+      </div>
+      <div class="guia-contenido" style="line-height: 1.6; color: #334155;">
+        <p>Las reservas siguen el flujo de la carga, desde la cotización hasta la entrega final al cliente.</p>
+        
+        <div class="flow-guide">
+          <div class="flow-node">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></span>
+            <span class="node-title">Pendiente</span>
+            <span class="node-desc">Reserva creada. Aún no tiene transporte asignado.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-primary">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></span>
+            <span class="node-title">Asignado</span>
+            <span class="node-desc">Se le asignó un Viaje Programado. Lista para salir.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-purple">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>
+            <span class="node-title">En Tránsito</span>
+            <span class="node-desc">El camión está en ruta hacia el destino.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-success">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+            <span class="node-title">Entregado</span>
+            <span class="node-desc">Carga entregada satisfactoriamente.</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 15px 0;">
+          <strong style="color: #64748b; font-size: 0.9rem;">DESVÍOS Y PROBLEMAS</strong>
+        </div>
+
+        <div class="flow-guide" style="background: #fef2f2; border-color: #fecaca;">
+          <div class="flow-node node-danger">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>
+            <span class="node-title">Contingencia Vehicular</span>
+            <span class="node-desc">El vehículo sufrió un accidente o avería. Posible retraso.</span>
+          </div>
+          
+          <span class="flow-arrow" style="color: #fca5a5; font-size: 0.8rem; font-weight: normal;">O BIEN</span>
+
+          <div class="flow-node node-neutral">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg></span>
+            <span class="node-title">Cancelado</span>
+            <span class="node-desc">La reserva fue anulada por el cliente o la empresa.</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-save w-100" (click)="mostrarGuiaEstados = false">Entendido</button>
+      </div>
+    </div>
+  </div>
+
 </div>

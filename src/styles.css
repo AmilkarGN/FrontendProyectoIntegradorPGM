@@ -6,6 +6,27 @@ body {
   padding: 0;
 }
 
+/* GLOBAL STYLES */
+.highlight-row {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-left: 4px solid #ef4444;
+  transition: all 0.5s ease;
+}
+
+.alert-icon {
+  color: #ef4444;
+  font-size: 1.1rem;
+  vertical-align: middle;
+  margin-left: 8px;
+  animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 /* =========================================================
    FIX PARA GOOGLE MAPS AUTOCOMPLETE SOBRE MODALES
    ========================================================= */
@@ -25,3 +46,107 @@ body {
 .pac-item:hover {
   background-color: #f1f5f9;
 }
+
+/* =========================================================
+   GUÍAS VISUALES DE ESTADO (GLOBAL)
+   ========================================================= */
+.flow-guide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap; /* Importante para que no se aprieten */
+  gap: 15px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin: 15px 0;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 15px;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  min-width: 140px;
+  flex: 1; /* Para que todos crezcan de forma balanceada */
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.flow-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.flow-node .node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.flow-node .node-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.flow-node .node-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.flow-node .node-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.flow-arrow {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-arrow svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+/* Colores de Nodos Especiales */
+.node-success { border-color: #10b981; background: #ecfdf5; }
+.node-success .node-icon { background: #d1fae5; color: #059669; }
+.node-success .node-title { color: #059669; }
+
+.node-primary { border-color: #3b82f6; background: #eff6ff; }
+.node-primary .node-icon { background: #dbeafe; color: #1d4ed8; }
+.node-primary .node-title { color: #1d4ed8; }
+
+.node-warning { border-color: #f59e0b; background: #fffbeb; }
+.node-warning .node-icon { background: #fef3c7; color: #b45309; }
+.node-warning .node-title { color: #b45309; }
+
+.node-danger { border-color: #ef4444; background: #fef2f2; }
+.node-danger .node-icon { background: #fee2e2; color: #b91c1c; }
+.node-danger .node-title { color: #b91c1c; }
+
+.node-purple { border-color: #8b5cf6; background: #f5f3ff; }
+.node-purple .node-icon { background: #ede9fe; color: #6d28d9; }
+.node-purple .node-title { color: #6d28d9; }
+
+.node-neutral { border-color: #94a3b8; background: #f8fafc; }
+.node-neutral .node-icon { background: #f1f5f9; color: #475569; }
+.node-neutral .node-title { color: #475569; }

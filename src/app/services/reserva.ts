@@ -28,6 +28,12 @@ export interface Reserva {
   telefono_destino: string;
   terminos_pago: string;
   
+  // Facturación
+  tarifa_qq_aplicada?: number;
+  tipo_descuento?: 'ninguno' | 'porcentaje' | 'monto_fijo';
+  valor_descuento?: number;
+  motivo_descuento?: string;
+  
   estado_reserva: number;
   estado_nombre?: string;
   fecha_creacion?: string;

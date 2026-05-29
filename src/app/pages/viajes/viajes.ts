@@ -20,15 +20,19 @@ export class ViajesComponent implements OnInit {
   estados: any[] = [];
   asignacionesActivas: any[] = [];
   asignacionesDisponibles: any[] = []; // Vehículos que NO están en ruta
+  vehiculos: any[] = []; // Vehículos para chequear el estado (Taller, etc)
+  conductores: any[] = []; // Conductores para chequear estado (Vacaciones, etc)
   rutas: any[] = [];
   reservasPendientes: any[] = [];
 
 // Código del viaje que se está rastreando en vivo
 
   esEdicion = false;
-  mostrarModalViaje = false;
-  mostrarModalViaticos = false;
-  mostrarModalDetalles = false;
+  mostrarModalViaje: boolean = false;
+  mostrarModalDetalles: boolean = false;
+  mostrarModalViaticos: boolean = false;
+  mostrarGuiaEstados: boolean = false;
+
   viajeSeleccionado: any = null;
 
   nuevoViaje: any = { 
@@ -51,6 +55,7 @@ export class ViajesComponent implements OnInit {
   mostrarToast = false;
   
   kpiViajes: any = null;
+  alertaDestacada: string | null = null;
 
   constructor(
     private viajeService: ViajeService,
@@ -60,7 +65,12 @@ export class ViajesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // 👇 ¡AQUÍ ESTABA EL PRIMER BUG! Faltaba llamar a esta función al iniciar
+    // El escuchador inteligente para alertas
+    this.route.queryParams.subscribe(params => {
+      if (params['alerta']) this.alertaDestacada = String(params['alerta']);
+    });
+    
+    // 👇 Inicialización original
     this.cargarDatosMaestros(); 
     this.cargarViajes(); 
 
@@ -95,9 +105,15 @@ export class ViajesComponent implements OnInit {
         );
       });
 
-      this.viajeService.obtenerAsignacionesActivas().subscribe(res => {
-        this.asignacionesActivas = res;
-        this.filtrarEquiposDisponibles();
+      this.http.get<any[]>('http://localhost:8000/api/vehiculos/').subscribe(vehs => {
+        this.vehiculos = vehs;
+        this.http.get<any[]>('http://localhost:8000/api/conductores/').subscribe(conds => {
+          this.conductores = conds;
+          this.viajeService.obtenerAsignacionesActivas().subscribe(res => {
+            this.asignacionesActivas = res;
+            this.filtrarEquiposDisponibles();
+          });
+        });
       });
       
       this.http.get('http://localhost:8000/api/estadisticas/viajes/').subscribe(data => {
@@ -178,7 +194,7 @@ export class ViajesComponent implements OnInit {
   // --- INTELIGENCIA DE NEGOCIO ---
 
   filtrarEquiposDisponibles() {
-    if (!this.asignacionesActivas.length || !this.viajes) return;
+    if (!this.asignacionesActivas.length || !this.viajes || !this.vehiculos || !this.conductores) return;
 
     const estadosOcupados = ['Programado', 'En Espera', 'En Curso'];
 
@@ -186,7 +202,21 @@ export class ViajesComponent implements OnInit {
       const estaOcupado = this.viajes.some(v => 
         v.asignacion === asig.id && estadosOcupados.includes(v.estado_nombre)
       );
-      return !estaOcupado; 
+      if (estaOcupado) return false;
+
+      // Filtro 1: El vehículo físico debe estar "Disponible"
+      const vehiculoObj = this.vehiculos.find(v => v.placa === asig.vehiculo);
+      if (vehiculoObj && vehiculoObj.estado !== 'Disponible') {
+        return false;
+      }
+      
+      // Filtro 2: El conductor debe estar "Disponible"
+      const conductorObj = this.conductores.find(c => c.id === asig.conductor);
+      if (conductorObj && conductorObj.estado !== 'Disponible') {
+        return false;
+      }
+
+      return true;
     });
   }
 
@@ -243,6 +273,10 @@ alSeleccionarVehiculo() {
   }
 
   // --- CRUD VIAJES ---
+
+  abrirGuiaEstados() {
+    this.mostrarGuiaEstados = true;
+  }
 
   abrirModalViaje() {
     this.esEdicion = false; 
@@ -336,23 +370,110 @@ alSeleccionarVehiculo() {
   }
 
   cambiarEstadoViaje(v: any, nuevoEstadoId: any) { 
-      // 🔥 EL ARREGLO: Le quitamos el "_id" para que coincida exactamente con el serializador
-      const payload = { estado_viaje: Number(nuevoEstadoId) };
+    const estadoAntiguo = v.estado_viaje_id || v.estado_viaje;
+    const estadoObj = this.estados.find(e => e.id == nuevoEstadoId);
+    if (!estadoObj) return;
 
-      this.viajeService.actualizarEstadoViaje(v.codigo_viaje, payload).subscribe({
-        next: () => {
-          this.mostrarMensaje('¡Estado del viaje y recursos sincronizados! 🔄', 'success');
-          this.cargarViajes();
-          this.cargarDatosMaestros(); 
-        },
-        error: (err) => {
-          console.error("Error al sincronizar:", err);
-          this.mostrarMensaje('Error al sincronizar el estado.', 'error');
+    const estadoAntiguoObj = this.estados.find(e => e.id == estadoAntiguo);
+
+    if (estadoAntiguoObj && (estadoAntiguoObj.nombre === 'Finalizado' || estadoAntiguoObj.nombre === 'Cancelado')) {
+      Swal.fire({
+        title: '⚠️ ACCIÓN CRÍTICA',
+        html: `Está intentando revertir un viaje <b>${estadoAntiguoObj.nombre}</b>.<br><br>
+               Esto reasignará los recursos (vehículo y conductor). Si los recursos ya fueron asignados a otro viaje, el sistema bloqueará esta acción.<br><br>
+               Escriba <b>REVERTIR</b> para confirmar.`,
+        icon: 'error',
+        input: 'text',
+        inputPlaceholder: 'REVERTIR',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Forzar Reversión',
+        cancelButtonText: 'Cancelar',
+        preConfirm: (inputValue) => {
+          if (inputValue !== 'REVERTIR') {
+            Swal.showValidationMessage('Debe escribir REVERTIR exactamente');
+            return false;
+          }
+          return true;
         }
-      }); 
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.ejecutarCambioEstado(v, nuevoEstadoId, estadoAntiguo);
+        } else {
+          v.estado_viaje_id = estadoAntiguo;
+          this.cargarViajes();
+        }
+      });
+      return;
     }
 
+    let titulo = '¿Actualizar estado del viaje?';
+    let mensaje = `¿Seguro que deseas pasar el viaje a estado ${estadoObj.nombre}?`;
+    let icono: 'question' | 'warning' = 'question';
+    let botonConfirmar = '#4f46e5';
+
+    if (estadoObj.nombre === 'Averiado en viaje') {
+      titulo = '⚠️ Registrar Contingencia (Avería)';
+      mensaje = 'Se marcará el vehículo como averiado y se actualizarán las reservas a contingencia. ¿Seguro?';
+      icono = 'warning';
+      botonConfirmar = '#ef4444';
+    } else if (estadoObj.nombre === 'Finalizado') {
+      mensaje = 'Esto liberará los recursos (vehículo y conductor) y finalizará las reservas. ¿Continuar?';
+      botonConfirmar = '#10b981';
+    }
+
+    Swal.fire({
+      title: titulo,
+      text: mensaje,
+      icon: icono,
+      showCancelButton: true,
+      confirmButtonColor: botonConfirmar,
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.ejecutarCambioEstado(v, nuevoEstadoId, estadoAntiguo);
+      } else {
+        v.estado_viaje_id = estadoAntiguo;
+        this.cargarViajes();
+      }
+    });
+  }
+
+  ejecutarCambioEstado(v: any, nuevoEstadoId: any, estadoAntiguo: any) {
+    const payload = { estado_viaje: Number(nuevoEstadoId) };
+    this.viajeService.actualizarEstadoViaje(v.codigo_viaje, payload).subscribe({
+      next: () => {
+        this.mostrarMensaje('¡Estado del viaje y recursos sincronizados! 🔄', 'success');
+        this.cargarViajes();
+        this.cargarDatosMaestros(); 
+      },
+      error: (err) => {
+        console.error("Error al sincronizar:", err);
+        let errorMsg = 'Error al sincronizar el estado.';
+        if (err.error && err.error.error) {
+          errorMsg = err.error.error;
+        }
+        Swal.fire('Reversión Bloqueada', errorMsg, 'error');
+        v.estado_viaje_id = estadoAntiguo;
+        this.cargarViajes();
+      }
+    }); 
+  }
+
   // --- DETALLES Y MAPA ---
+
+  getStepIndex(estado: string): number {
+    if (!estado) return 0;
+    if (estado === 'Programado' || estado === 'En Espera') return 0;
+    if (estado === 'En Curso') return 1;
+    if (estado === 'Averiado en viaje') return 1;
+    if (estado === 'Finalizado') return 2;
+    if (estado === 'Cancelado') return 2;
+    return 0;
+  }
 
   abrirDetalles(v: any) {
     this.viajeSeleccionado = v;

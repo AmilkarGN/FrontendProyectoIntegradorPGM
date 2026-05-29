@@ -13,15 +13,12 @@
     <button [ngClass]="tabActiva === 'tipos' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'tipos'; terminoBusqueda=''">
       🚛 Tipos
     </button>
-    <button [ngClass]="tabActiva === 'estados' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'estados'; terminoBusqueda=''">
-      🚥 Estados
-    </button>
-    <button [ngClass]="tabActiva === 'asignaciones' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'asignaciones'; terminoBusqueda=''">
-      🔗 Asignaciones
+    <button [ngClass]="tabActiva === 'licencias' ? 'tab-btn tab-btn-active' : 'tab-btn tab-btn-inactive'" (click)="tabActiva = 'licencias'; terminoBusqueda=''">
+      🪪 Categorías de Licencia
     </button>
   </div>
 
-  <ng-container *ngIf="tabActiva !== 'asignaciones'">
+  <ng-container>
     
     <div class="crud-header">
       <h3 style="text-transform: capitalize;">Listado de {{ tabActiva }}</h3>
@@ -32,7 +29,7 @@
       <thead>
         <tr *ngIf="tabActiva === 'modelos'"><th>Marca</th><th>Modelo</th><th>Año</th><th>Acciones</th></tr>
         <tr *ngIf="tabActiva === 'tipos'"><th>Nombre</th><th>Capacidad (kg)</th><th>Licencia Requerida</th><th>Acciones</th></tr>
-        <tr *ngIf="tabActiva === 'estados'"><th>ID</th><th>Nombre del Estado</th><th>Acciones</th></tr>
+        <tr *ngIf="tabActiva === 'licencias'"><th>ID</th><th>Nombre de Categoría</th><th>Tipo Vehículo Permitido</th><th>Acciones</th></tr>
       </thead>
       <tbody>
         <ng-container *ngIf="tabActiva === 'modelos'">
@@ -64,12 +61,19 @@
           </tr>
         </ng-container>
 
-        <ng-container *ngIf="tabActiva === 'estados'">
-          <tr *ngFor="let e of filtrados">
-            <td>#{{ e.id }}</td><td><strong>{{ e.nombre }}</strong></td>
+
+        <ng-container *ngIf="tabActiva === 'licencias'">
+          <tr *ngFor="let c of filtrados">
+            <td>#{{ c.id }}</td>
+            <td><strong>{{ c.nombre }}</strong></td>
+            <td>
+              <span class="badge" [ngClass]="c.permite_maquinaria_pesada ? 'badge-taller' : 'badge-disponible'">
+                {{ c.permite_maquinaria_pesada ? '🚛 Maquinaria Pesada' : '🚗 Vehículos Livianos' }}
+              </span>
+            </td>
             <td class="actions-column">
-              <button class="btn-action btn-edit" (click)="abrirModal(e)">✏️ Editar</button>
-              <button class="btn-action btn-delete" (click)="eliminar(e.id)">🗑️ Eliminar</button>
+              <button class="btn-action btn-edit" (click)="abrirModal(c)">✏️ Editar</button>
+              <button class="btn-action btn-delete" (click)="eliminar(c.id)">🗑️ Eliminar</button>
             </td>
           </tr>
         </ng-container>
@@ -98,13 +102,21 @@
               <label>Licencia Mínima Requerida</label>
               <select name="t_lic" [(ngModel)]="objetoActual.categoria_licencia_requerida">
                 <option [ngValue]="null">Ninguna / Particular (P)</option>
-                <option *ngFor="let c of categorias" [value]="c.id">{{ c.nombre }}</option>
+                <option *ngFor="let c of categoriasLicencia" [value]="c.id">{{ c.nombre }}</option>
               </select>
             </div>
           </div>
 
-          <div *ngIf="tabActiva === 'estados'">
-            <div class="form-group"><label>Nombre del Estado</label><input type="text" name="e_nom" [(ngModel)]="objetoActual.nombre" required></div>
+
+
+          <div *ngIf="tabActiva === 'licencias'">
+            <div class="form-group"><label>Nombre de Categoría</label><input type="text" name="l_nom" [(ngModel)]="objetoActual.nombre" required></div>
+            <div class="form-group"><label>Edad Mínima Legal</label><input type="number" name="l_edad" [(ngModel)]="objetoActual.edad_minima" required></div>
+            <div class="form-group"><label>Tonelaje Máximo (t)</label><input type="number" name="l_ton" [(ngModel)]="objetoActual.tonelaje_maximo"></div>
+            <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+              <input type="checkbox" id="pesada" name="pesada" [(ngModel)]="objetoActual.permite_maquinaria_pesada">
+              <label for="pesada">Permite conducir Maquinaria Pesada</label>
+            </div>
           </div>
 
           <div class="modal-actions" style="margin-top: 20px;">
@@ -116,85 +128,7 @@
     </div>
   </ng-container>
 
-  <ng-container *ngIf="tabActiva === 'asignaciones'">
-    <div class="reserva-grid" style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 25px; margin-top: 15px;">
-      
-      <div class="calendar-card" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); height: fit-content;">
-        <h3 style="color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;">Nueva Vinculación</h3>
-        
-        <form (ngSubmit)="asignarVehiculo()">
-          <div class="form-group" style="margin-top: 15px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #334155;">👨‍💼 Conductor Disponible</label>
-            <select name="conductor" [(ngModel)]="nuevaAsignacion.conductor" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-              <option value="">-- Selecciona --</option>
-              <option *ngFor="let c of conductoresDisponibles" [value]="c.id">
-                {{ c.usuario_detalles?.nombre || 'ID: ' + c.id }}
-              </option>
-            </select>
-            <small *ngIf="conductoresDisponibles.length === 0" style="color: #ef4444; margin-top: 5px; display: block;">Todos los conductores están asignados.</small>
-          </div>
 
-          <div class="form-group" style="margin-top: 15px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #334155;">🚛 Vehículo en Base</label>
-            <select name="vehiculo" [(ngModel)]="nuevaAsignacion.vehiculo" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-              <option value="">-- Selecciona --</option>
-              <option *ngFor="let v of vehiculosDisponibles" [value]="v.placa">
-                {{ v.placa }}
-              </option>
-            </select>
-            <small *ngIf="vehiculosDisponibles.length === 0" style="color: #ef4444; margin-top: 5px; display: block;">No hay vehículos libres en base.</small>
-          </div>
-
-          <div class="form-group" style="margin-top: 15px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #334155;">📝 Observaciones</label>
-            <textarea name="observaciones" [(ngModel)]="nuevaAsignacion.observaciones" rows="3" placeholder="Ej: Unidad revisada y limpia..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;"></textarea>
-          </div>
-
-          <button type="submit" class="btn-save" [disabled]="conductoresDisponibles.length === 0 || vehiculosDisponibles.length === 0" style="width: 100%; margin-top: 20px; padding: 12px; font-size: 1rem;" [ngStyle]="{'opacity': (conductoresDisponibles.length === 0 || vehiculosDisponibles.length === 0) ? '0.5' : '1', 'cursor': (conductoresDisponibles.length === 0 || vehiculosDisponibles.length === 0) ? 'not-allowed' : 'pointer'}">
-            Vincular Equipo
-          </button>
-        </form>
-      </div>
-
-      <div class="calendar-card" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-        <h3 style="color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;">Unidades en Operación</h3>
-        
-        <table class="crud-table" style="margin-top: 15px;">
-          <thead>
-            <tr>
-              <th>Conductor</th>
-              <th>Vehículo</th>
-              <th>Fecha Inicio</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let a of filtrados">
-              <td><strong>{{ a.conductor_nombre }}</strong></td>
-              <td>
-                <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 6px;">{{ a.vehiculo }}</span>
-                <br><small style="color: #64748b;">{{ a.vehiculo_info }}</small>
-              </td>
-              <td>{{ a.fecha_asignacion | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td><span class="badge" style="background: #dcfce7; color: #15803d;">Activo</span></td>
-              <td class="actions-column">
-                <button type="button" class="btn-cancel" (click)="desvincular(a.id)" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">
-                  Liberar Unidad
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="asignacionesActivas.length === 0">
-              <td colspan="5" style="text-align: center; padding: 30px; color: #94a3b8;">
-                No hay unidades asignadas actualmente.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-    </div>
-  </ng-container>
 
   <div class="toast-notification" [ngClass]="{'show': mostrarToast, 'success': tipoToast === 'success', 'error': tipoToast === 'error'}">
     <span class="toast-icon">{{ tipoToast === 'success' ? '✅' : '⚠️' }}</span>

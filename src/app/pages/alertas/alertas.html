@@ -1,0 +1,70 @@
+<div class="page-container fade-in">
+  
+  <div class="header-section">
+    <div class="title-area">
+      <h1><span class="material-symbols-rounded">notifications_active</span> Centro de Monitoreo y Alertas</h1>
+      <p class="subtitle">Detección temprana de vencimientos y demoras logísticas</p>
+    </div>
+    
+    <div class="actions">
+      <button class="btn btn-secondary" (click)="refrescar()" [disabled]="cargando">
+        <span class="material-symbols-rounded" [class.spin]="cargando">refresh</span> 
+        {{ cargando ? 'Calculando...' : 'Actualizar' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="content-body">
+    <!-- Estado: Cargando -->
+    <div class="empty-state" *ngIf="cargando">
+      <div class="spinner"></div>
+      <h3>Analizando base de datos...</h3>
+      <p>Calculando fechas de vencimientos y estados de viaje.</p>
+    </div>
+
+    <!-- Estado: Sin Alertas -->
+    <div class="empty-state success" *ngIf="!cargando && alertas.length === 0">
+      <span class="material-symbols-rounded giant-icon">check_circle</span>
+      <h3>¡Todo está bajo control!</h3>
+      <p>No existen vencimientos próximos ni demoras detectadas.</p>
+    </div>
+
+    <!-- Estado: Con Alertas -->
+    <div class="alerts-grid" *ngIf="!cargando && alertas.length > 0">
+      
+      <div class="alert-card" 
+           *ngFor="let alerta of alertas" 
+           [ngClass]="{'critica': alerta.prioridad === 'critica', 'preventiva': alerta.prioridad === 'preventiva'}">
+        
+        <div class="card-header">
+          <div class="icon-container">
+            <span class="material-symbols-rounded" *ngIf="alerta.tipo === 'vehiculo'">local_shipping</span>
+            <span class="material-symbols-rounded" *ngIf="alerta.tipo === 'conductor'">badge</span>
+            <span class="material-symbols-rounded" *ngIf="alerta.tipo === 'reserva'">inventory_2</span>
+            <span class="material-symbols-rounded" *ngIf="alerta.tipo === 'viaje'">route</span>
+          </div>
+          
+          <div class="badge">{{ alerta.tipo | uppercase }}</div>
+          
+          <!-- Icono de Info (Solo para CRITICAS) que solicitó el usuario -->
+          <div class="critical-info-icon" *ngIf="alerta.prioridad === 'critica'" (click)="mostrarDetalleCritico(alerta)" title="Ver detalle crítico">
+            <span class="material-symbols-rounded">info</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <h3 class="alert-title">{{ alerta.titulo }}</h3>
+          <p class="alert-message">{{ alerta.mensaje }}</p>
+        </div>
+
+        <div class="card-footer">
+          <button class="btn-action" (click)="irASeccion(alerta.enlace, alerta.registroId)">
+            Solucionar <span class="material-symbols-rounded">arrow_forward</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

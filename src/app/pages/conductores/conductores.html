@@ -1,7 +1,10 @@
 <div class="crud-container fade-in">
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Gestión de Conductores (Flota)</h2>
-    <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Asignar Conductor</button>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="mostrarGuiaEstados = true" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Asignar Conductor</button>
+    </div>
   </div>
 
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
@@ -22,17 +25,21 @@
         <th>Conductor (Usuario)</th>
         <th>Nro. Licencia</th>
         <th>Categoría</th>
+        <th style="text-align: center;">Estado</th>
         <th>Vencimiento</th>
-        <th>Acciones</th>
+        <th style="text-align: center;">Acciones</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let conductor of filtrados">
+      <tr *ngFor="let conductor of filtrados" [class.highlight-row]="alertaDestacada === conductor.id?.toString()">
         <td>
           <img [src]="obtenerImagenUrl(conductor.usuario_detalles?.foto_perfil)" class="avatar-img" alt="Perfil">
         </td>
         <td>
-          <strong>{{ conductor.usuario_detalles?.nombre }} {{ conductor.usuario_detalles?.apellido_paterno }}</strong><br>
+          <strong>
+            {{ conductor.usuario_detalles?.nombre }} {{ conductor.usuario_detalles?.apellido_paterno }}
+            <span *ngIf="alertaDestacada === conductor.id?.toString()" class="material-symbols-rounded alert-icon" title="¡Este registro requiere atención!">info</span>
+          </strong><br>
           <small>CI: {{ conductor.usuario_detalles?.ci }}</small>
         </td>
         <td>{{ conductor.nro_licencia }}</td>
@@ -40,6 +47,20 @@
           <span class="badge" [ngClass]="conductor.categoria_detalles?.permite_maquinaria_pesada ? 'badge-pesada' : 'badge-liviana'">
             {{ conductor.categoria_detalles?.nombre }}
           </span>
+        </td>
+        <td>
+          <select 
+            class="status-select" 
+            [ngClass]="{
+              'status-ruta': conductor.estado === 'En Ruta',
+              'status-disponible': conductor.estado === 'Disponible',
+              'status-taller': conductor.estado !== 'En Ruta' && conductor.estado !== 'Disponible'
+            }"
+            [(ngModel)]="conductor.estado" 
+            (change)="cambiarEstadoRapido(conductor, $event)"
+            title="Cambiar estado del conductor">
+            <option *ngFor="let e of estados" [value]="e">{{ e }}</option>
+          </select>
         </td>
         <td>
           <span [ngStyle]="{'color': conductor.vencimiento_licencia < fechaHoy ? '#ef4444' : '#1e293b', 'font-weight': '600'}">
@@ -55,14 +76,69 @@
     </tbody>
   </table>
 
+  <!-- MODAL DE GUÍA DE ESTADOS -->
+  <div class="crud-modal-overlay" *ngIf="mostrarGuiaEstados" style="z-index: 9999;">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header">
+        <h3>ℹ️ Mapa Visual de Estados: CONDUCTORES</h3>
+      </div>
+      <div class="guia-contenido" style="line-height: 1.6; color: #334155;">
+        <p>Los conductores pasan a "En Ruta" automáticamente cuando su Viaje empieza. Si necesitan descansar o sufren una avería, el estado cambia para proteger sus tiempos operativos.</p>
+        
+        <div class="flow-guide">
+          <div class="flow-node">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+            <span class="node-title">Disponible</span>
+            <span class="node-desc">Listo para ser asignado.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-primary">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l3 3v6h-3m-12 0H5m3 0a3 3 0 11-6 0m6 0a3 3 0 106 0m-6 0h6m6 0a3 3 0 11-6 0m6 0h3v-6"/></svg></span>
+            <span class="node-title">En Ruta</span>
+            <span class="node-desc">Manejando. Asignado a un viaje en curso.</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 15px 0;">
+          <strong style="color: #64748b; font-size: 0.9rem;">DESCANSO Y CONTINGENCIA</strong>
+        </div>
+
+        <div class="flow-guide" style="background: #f8fafc; border-color: #cbd5e1;">
+          <div class="flow-node node-neutral">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg></span>
+            <span class="node-title">Descanso/Permiso</span>
+            <span class="node-desc">El conductor está fuera de servicio por descanso o permiso médico.</span>
+          </div>
+          
+          <span class="flow-arrow" style="color: #cbd5e1; font-size: 0.8rem; font-weight: normal;">O BIEN</span>
+
+          <div class="flow-node node-danger">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>
+            <span class="node-title">Vehículo averiado</span>
+            <span class="node-desc">Retenido en ruta. Responsable del vehículo varado.</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-save w-100" (click)="mostrarGuiaEstados = false">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <div class="crud-modal-overlay" *ngIf="mostrarModal && (modoModal === 'crear' || modoModal === 'editar')" style="z-index: 9999;">
     <div class="crud-modal slide-in-bottom">
       <h3>{{ modoModal === 'editar' ? 'Modificar Conductor' : 'Nuevo Registro de Conductor' }}</h3>
       
       <form (ngSubmit)="conductorForm.invalid ? conductorForm.control.markAllAsTouched() : guardarConductor(conductorForm)" #conductorForm="ngForm">
         
-        <div class="form-grid">
-          
+        <!-- SECCIÓN 1: DATOS PERSONALES Y CONTACTO -->
+        <h5 style="margin-top: 10px; margin-bottom: 15px; color: #4f46e5; border-bottom: 1px solid #e0e7ff; padding-bottom: 5px; font-weight: 600;">
+          👤 Datos Personales y de Contacto
+        </h5>
+        <div class="form-grid" style="margin-bottom: 20px;">
           <div class="form-group">
             <label>Usuario del Sistema Disponible *</label>
             <select class="form-control" [(ngModel)]="conductorActual.usuario" name="usuario" required [attr.disabled]="modoModal === 'editar' ? true : null">
@@ -74,42 +150,19 @@
                 {{ conductorActual.usuario_detalles?.nombre }} {{ conductorActual.usuario_detalles?.apellido_paterno }}
               </option>
             </select>
-                      <small *ngIf="conductorForm.controls['usuario']?.invalid && conductorForm.controls['usuario']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Nro. de Licencia *</label>
-            <input type="text" class="form-control" [(ngModel)]="conductorActual.nro_licencia" name="nro_licencia" minlength="4" required>
-                      <small *ngIf="conductorForm.controls['nro_licencia']?.invalid && conductorForm.controls['nro_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Categoría Asignada *</label>
-            <select class="form-control" [(ngModel)]="conductorActual.categoria_licencia" name="categoria_licencia" required>
-              <option [ngValue]="null">-- Selecciona Categoría --</option>
-              <option *ngFor="let c of categorias" [ngValue]="c.id">
-                {{ c.nombre }} (Mín: {{ c.edad_minima }} años)
-              </option>
-            </select>
-                      <small *ngIf="conductorForm.controls['categoria_licencia']?.invalid && conductorForm.controls['categoria_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Fecha de Emisión *</label>
-            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_emision_licencia" name="fecha_emision_licencia" max="{{fechaHoy}}" required>
-                      <small *ngIf="conductorForm.controls['fecha_emision_licencia']?.invalid && conductorForm.controls['fecha_emision_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Fecha de Vencimiento *</label>
-            <input type="date" class="form-control" [(ngModel)]="conductorActual.vencimiento_licencia" name="vencimiento_licencia" min="{{fechaHoy}}" required>
-                      <small *ngIf="conductorForm.controls['vencimiento_licencia']?.invalid && conductorForm.controls['vencimiento_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+            <small *ngIf="conductorForm.controls['usuario']?.invalid && conductorForm.controls['usuario']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Fecha de Nacimiento *</label>
             <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_nacimiento" name="fecha_nacimiento" max="{{fechaMenos18Anios}}" required>
-                      <small *ngIf="conductorForm.controls['fecha_nacimiento']?.invalid && conductorForm.controls['fecha_nacimiento']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+            <small *ngIf="conductorForm.controls['fecha_nacimiento']?.invalid && conductorForm.controls['fecha_nacimiento']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Dirección de Domicilio *</label>
+            <input type="text" class="form-control" [(ngModel)]="conductorActual.direccion" name="direccion" required>
+            <small *ngIf="conductorForm.controls['direccion']?.invalid && conductorForm.controls['direccion']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
@@ -128,21 +181,50 @@
           </div>
 
           <div class="form-group">
-            <label>Dirección de Domicilio *</label>
-            <input type="text" class="form-control" [(ngModel)]="conductorActual.direccion" name="direccion" required>
-                      <small *ngIf="conductorForm.controls['direccion']?.invalid && conductorForm.controls['direccion']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
-
-          <div class="form-group">
             <label>Contacto de Emergencia (Nombre) *</label>
             <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_nombre" name="contacto_emergencia_nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" required>
-                      <small *ngIf="conductorForm.controls['contacto_emergencia_nombre']?.invalid && conductorForm.controls['contacto_emergencia_nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+            <small *ngIf="conductorForm.controls['contacto_emergencia_nombre']?.invalid && conductorForm.controls['contacto_emergencia_nombre']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
 
           <div class="form-group">
             <label>Teléfono de Emergencia *</label>
             <input type="text" class="form-control" [(ngModel)]="conductorActual.contacto_emergencia_telefono" name="contacto_emergencia_telefono" pattern="[0-9]+" required>
-                      <small *ngIf="conductorForm.controls['contacto_emergencia_telefono']?.invalid && conductorForm.controls['contacto_emergencia_telefono']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+            <small *ngIf="conductorForm.controls['contacto_emergencia_telefono']?.invalid && conductorForm.controls['contacto_emergencia_telefono']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: DATOS DE LICENCIA -->
+        <h5 style="margin-top: 5px; margin-bottom: 15px; color: #4f46e5; border-bottom: 1px solid #e0e7ff; padding-bottom: 5px; font-weight: 600;">
+          🪪 Información de la Licencia
+        </h5>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nro. de Licencia *</label>
+            <input type="text" class="form-control" [(ngModel)]="conductorActual.nro_licencia" name="nro_licencia" minlength="4" required>
+            <small *ngIf="conductorForm.controls['nro_licencia']?.invalid && conductorForm.controls['nro_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Categoría Asignada *</label>
+            <select class="form-control" [(ngModel)]="conductorActual.categoria_licencia" name="categoria_licencia" required>
+              <option [ngValue]="null">-- Selecciona Categoría --</option>
+              <option *ngFor="let c of categorias" [ngValue]="c.id">
+                {{ c.nombre }} (Mín: {{ c.edad_minima }} años)
+              </option>
+            </select>
+            <small *ngIf="conductorForm.controls['categoria_licencia']?.invalid && conductorForm.controls['categoria_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Emisión *</label>
+            <input type="date" class="form-control" [(ngModel)]="conductorActual.fecha_emision_licencia" name="fecha_emision_licencia" max="{{fechaHoy}}" required>
+            <small *ngIf="conductorForm.controls['fecha_emision_licencia']?.invalid && conductorForm.controls['fecha_emision_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Vencimiento *</label>
+            <input type="date" class="form-control" [(ngModel)]="conductorActual.vencimiento_licencia" name="vencimiento_licencia" min="{{fechaHoy}}" required>
+            <small *ngIf="conductorForm.controls['vencimiento_licencia']?.invalid && conductorForm.controls['vencimiento_licencia']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>
 

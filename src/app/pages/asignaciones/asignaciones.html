@@ -1,0 +1,174 @@
+<div class="crud-container fade-in">
+  <div class="crud-header">
+    <h2>🔗 Asignaciones de Flota</h2>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="abrirGuiaEstados()" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <div class="search-box">
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="🔍 Buscar conductor o vehículo...">
+      </div>
+    </div>
+  </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarGuiaEstados">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header">
+        <h3>ℹ️ Mapa Visual de Estados: ASIGNACIONES</h3>
+      </div>
+      <div class="guia-contenido" style="line-height: 1.6; color: #334155;">
+        <p>Una <strong>Asignación</strong> es el vínculo legal y operativo entre un Conductor y un Vehículo. Sólo puede existir un vínculo activo por vehículo y por conductor.</p>
+        
+        <div class="flow-guide">
+          <div class="flow-node node-success">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></span>
+            <span class="node-title">Asignación Vigente</span>
+            <span class="node-desc">El vehículo y conductor están atados trabajando en equipo.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-neutral">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></span>
+            <span class="node-title">Desvinculada</span>
+            <span class="node-desc">El lazo se rompió. Ambos recursos vuelven a estar "Disponibles".</span>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 8px; margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-top: 0;">¿Cuándo desvincular?</h4>
+          <ul style="margin-bottom: 0; padding-left: 20px;">
+            <li>Si el conductor se va de vacaciones largas o permiso (se desvincula para liberar el auto).</li>
+            <li><strong>Mantenimiento / En Taller:</strong> El vehículo <strong>NO</strong> se desvincula automáticamente. El conductor mantiene la custodia de su unidad a menos que decidas desvincularlo manualmente.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-save w-100" (click)="mostrarGuiaEstados = false">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
+    <h2>{{ viendoHistorial ? 'Historial de Asignaciones' : 'Asignaciones Activas (Unidades en Operación)' }}</h2>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #475569;" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action" style="background: #059669;" (click)="exportarListado('excel')">📊 Exportar Excel</button>
+      <button class="btn-action" [style.background]="viendoHistorial ? '#eab308' : '#4f46e5'" (click)="toggleHistorial()">
+        {{ viendoHistorial ? '🔙 Ver Activas' : '🕰️ Ver Historial' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="crud-content" [style.grid-template-columns]="viendoHistorial ? '1fr' : '350px 1fr'" style="display: grid; gap: 20px; align-items: start; margin-top: 15px;">
+    
+    <!-- PANEL IZQUIERDO: NUEVA VINCULACIÓN (Solo se muestra si no estamos en historial) -->
+    <div class="crud-modal" style="position: static; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 20px; border: 1px solid #e2e8f0; height: fit-content;" *ngIf="!viendoHistorial">
+      <h3 style="margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">🔗 Crear Nueva Vinculación</h3>
+      
+      <div class="form-group" style="margin-top: 15px;">
+        <label>1. Seleccionar Conductor Disponible</label>
+        <select class="form-control" [(ngModel)]="nuevaAsignacion.conductor">
+          <option value="">-- Elija un conductor libre --</option>
+          <option *ngFor="let c of conductoresDisponibles" [value]="c.id">
+            {{ c.usuario_detalles?.nombre }} {{ c.usuario_detalles?.apellido_paterno }}
+          </option>
+        </select>
+        <small *ngIf="conductoresDisponibles.length === 0" style="color: #ef4444;">No hay conductores disponibles (en espera o de vacaciones).</small>
+      </div>
+
+      <div class="form-group">
+        <label>2. Seleccionar Vehículo (Solo Disponibles)</label>
+        <select class="form-control" [(ngModel)]="nuevaAsignacion.vehiculo">
+          <option value="">-- Elija un vehículo en base --</option>
+          <option *ngFor="let v of vehiculosDisponibles" [value]="v.placa">
+            {{ v.placa }} - {{ v.tipo_detalles?.nombre }}
+          </option>
+        </select>
+        <small *ngIf="vehiculosDisponibles.length === 0" style="color: #ef4444;">No hay vehículos libres (todos en ruta o taller).</small>
+      </div>
+
+      <div class="form-group">
+        <label>Notas / Observaciones Iniciales</label>
+        <textarea class="form-control" [(ngModel)]="nuevaAsignacion.observaciones" rows="3" placeholder="Ej: Camión entregado con tanque lleno..."></textarea>
+      </div>
+
+      <button class="btn-action btn-add" style="width: 100%; margin-top: 10px; justify-content: center;" (click)="asignarVehiculo()" [disabled]="!nuevaAsignacion.conductor || !nuevaAsignacion.vehiculo">
+        Vincular Unidad
+      </button>
+    </div>
+
+    <!-- PANEL DERECHO: LISTA DE UNIDADES (O HISTORIAL) -->
+    <div style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0;">
+      
+      <div class="search-bar" style="margin-bottom: 15px;">
+        <span class="material-symbols-rounded search-icon">search</span>
+        <input type="text" placeholder="Buscar por conductor o placa..." [(ngModel)]="terminoBusqueda" class="search-input">
+      </div>
+
+      <table class="crud-table">
+        <thead>
+          <tr>
+            <th>Conductor</th>
+            <th>Vehículo</th>
+            <th>Estado Asignación</th>
+            <th *ngIf="!viendoHistorial">Estado Vehículo (Sincronizado)</th>
+            <th *ngIf="viendoHistorial">Fechas</th>
+            <th *ngIf="!viendoHistorial">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of filtrados">
+            <td>
+              <strong>{{ a.conductor_nombre }}</strong><br>
+              <small style="color: #64748b;">Licencia: {{ a.conductor_licencia }}</small>
+            </td>
+            <td>
+              <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 6px;">{{ a.vehiculo }}</span>
+              <br><small style="color: #64748b;">{{ a.vehiculo_info }}</small>
+            </td>
+            <td>
+              <span class="badge" 
+                    [ngClass]="{
+                      'badge-ruta': getEstadoAsignacion(a) === 'En Viaje',
+                      'badge-disponible': getEstadoAsignacion(a) === 'Disponible'
+                    }"
+                    [style.background]="getEstadoAsignacion(a) === 'En Viaje' ? '#fef08a' : (getEstadoAsignacion(a) === 'Disponible' ? '#dcfce7' : '#fee2e2')"
+                    [style.color]="getEstadoAsignacion(a) === 'En Viaje' ? '#854d0e' : (getEstadoAsignacion(a) === 'Disponible' ? '#15803d' : '#991b1b')">
+                {{ getEstadoAsignacion(a) }}
+              </span>
+            </td>
+            <td *ngIf="!viendoHistorial">
+              <select 
+                class="status-select" 
+                [ngClass]="{
+                  'status-disponible': getEstadoVehiculo(a.vehiculo) === 'Disponible',
+                  'status-ruta': getEstadoVehiculo(a.vehiculo) === 'En Ruta' || getEstadoVehiculo(a.vehiculo) === 'En Viaje',
+                  'status-taller': getEstadoVehiculo(a.vehiculo) === 'En Taller' || getEstadoVehiculo(a.vehiculo) === 'Taller'
+                }"
+                [ngModel]="getEstadoVehiculo(a.vehiculo)" 
+                (change)="cambiarEstadoVehiculo(a, $event)"
+                title="Cambiar estado del vehículo físicamente">
+                <option *ngFor="let e of estadosVehiculo" [value]="e">{{ e }}</option>
+              </select>
+            </td>
+            <td class="actions-column">
+              <button type="button" class="btn-cancel" (click)="desvincular(a.id)" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">
+                Liberar
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="asignacionesActivas.length === 0">
+            <td colspan="4" style="text-align: center; padding: 30px; color: #94a3b8;">
+              No hay unidades asignadas actualmente.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+  </div>
+
+  <div class="toast-notification" [ngClass]="{'show': mostrarToast, 'success': tipoToast === 'success', 'error': tipoToast === 'error'}">
+    <span class="toast-icon">{{ tipoToast === 'success' ? '✅' : '⚠️' }}</span>
+    <span class="toast-message">{{ mensajeToast }}</span>
+  </div>
+</div>

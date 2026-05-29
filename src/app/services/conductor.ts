@@ -33,7 +33,7 @@ export interface Conductor {
   grupo_sanguineo?: string;
   contacto_emergencia_nombre: string;
   contacto_emergencia_telefono: string;
-  disponible?: boolean;
+  estado?: string;
 }
 
 
@@ -50,6 +50,7 @@ export class ConductorService {
   obtenerConductores(): Observable<Conductor[]> { return this.http.get<Conductor[]>(this.apiUrl); }
   crearConductor(conductor: Conductor): Observable<Conductor> { return this.http.post<Conductor>(this.apiUrl, conductor); }
   actualizarConductor(id: number, conductor: Conductor): Observable<Conductor> { return this.http.put<Conductor>(`${this.apiUrl}${id}/`, conductor); }
+  patchConductor(id: number, datos: any): Observable<Conductor> { return this.http.patch<Conductor>(`${this.apiUrl}${id}/`, datos); }
   eliminarConductor(id: number): Observable<any> { return this.http.delete(`${this.apiUrl}${id}/`); }
 
   // --- OBTENER CATEGORÍAS PARA EL SELECT ---

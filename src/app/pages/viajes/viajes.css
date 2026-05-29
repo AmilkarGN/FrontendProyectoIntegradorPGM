@@ -344,3 +344,103 @@
     transform: translateY(0);
   }
 }
+
+/* =========================================================
+   STEPPER / LÍNEA DE VIDA DEL VIAJE
+   ========================================================= */
+.viaje-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 25px 0 35px 0;
+  padding: 20px;
+  background: #f8fafc !important;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100px;
+  position: relative;
+  z-index: 2;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  opacity: 1;
+}
+
+.step-icon {
+  width: 45px;
+  height: 45px;
+  background: #e2e8f0 !important;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border: 3px solid #cbd5e1 !important;
+  transition: all 0.3s ease;
+}
+
+.step.completed .step-icon {
+  background: #10b981 !important;
+  border-color: #059669 !important;
+  color: white;
+}
+
+.step.active .step-icon {
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.step.error-step.active .step-icon {
+  border-color: #ef4444 !important;
+  background: #fee2e2 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.step p {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569 !important;
+  text-align: center;
+}
+
+.step.active p {
+  color: #0f172a !important;
+}
+
+.step.error-step p {
+  color: #ef4444 !important;
+}
+
+.step-line {
+  flex-grow: 1;
+  height: 4px;
+  background: #cbd5e1 !important;
+  margin: 0 -20px;
+  margin-bottom: 25px; /* Alineación al centro de los iconos */
+  position: relative;
+  z-index: 1;
+  transition: background 0.3s ease;
+}
+
+.step-line.completed-line {
+  background: #10b981 !important;
+}
+
+.step-line.error-line {
+  background: #ef4444 !important;
+}
+
+.step-line.hidden-line {
+  display: none;
+}

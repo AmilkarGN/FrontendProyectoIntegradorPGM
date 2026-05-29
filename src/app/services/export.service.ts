@@ -127,13 +127,13 @@ export class ExportService {
     doc.text(`Fecha Solicitud: ${new Date(reserva.fecha_tentativa_viaje).toLocaleDateString()}`, 110, 69);
     doc.text(`Emitido por: ${autor}`, 110, 75);
 
-    // Detalles del Trayecto
+    // Detalles del Trayecto y Logística
     doc.setFillColor(241, 245, 249);
-    doc.rect(14, 85, 182, 35, 'F');
+    doc.rect(14, 85, 182, 45, 'F');
     
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(11);
-    doc.text('Ruta del Servicio', 18, 93);
+    doc.text('Ruta y Logística', 18, 93);
     
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
@@ -141,15 +141,26 @@ export class ExportService {
     doc.text(`Destino: ${reserva.direccion_destino}`, 18, 110);
     doc.text(`Distancia Real: ${reserva.distancia_real_km || '0'} Km`, 18, 118);
 
+    if (reserva.viaje_detalles) {
+      doc.text(`Transporte: ${reserva.viaje_detalles.vehiculo_placa || 'S/N'}`, 110, 102);
+      doc.text(`Conductor: ${reserva.viaje_detalles.conductor_nombre || 'S/N'}`, 110, 110);
+      doc.text(`Estado Viaje: ${reserva.viaje_detalles.estado_nombre || 'S/N'}`, 110, 118);
+      if (reserva.estado_nombre === 'Entregado' && reserva.viaje_detalles.fecha_llegada_estimada) {
+        doc.text(`Fecha Entrega: ${new Date(reserva.viaje_detalles.fecha_llegada_estimada).toLocaleDateString()}`, 110, 126);
+      }
+    } else {
+      doc.text(`Transporte: Pendiente de asignación`, 110, 102);
+    }
+
     // Cálculo de Quintales (1 qq = 45 kg)
     const pesoKg = parseFloat(reserva.peso_estimado_kg) || 0;
     const pesoQq = pesoKg / 45;
-    const precioPorQq = 20.00; // Tarifa estática de transporte
+    const precioPorQq = parseFloat(reserva.tarifa_qq_aplicada) || 20.00;
     const subtotal = pesoQq * precioPorQq;
 
     // Tabla de Items (Carga)
     autoTable(doc, {
-      startY: 130,
+      startY: 140,
       head: [['Descripción del Servicio', 'Peso', 'Tipo', 'Precio Unit.', 'Subtotal']],
       body: [
         [
@@ -164,12 +175,34 @@ export class ExportService {
       headStyles: { fillColor: [15, 23, 42], textColor: 255 },
     });
 
-    // Totales
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // Totales y Descuentos
+    let finalY = (doc as any).lastAutoTable.finalY + 10;
     
+    let descuentoTotal = 0;
+    const valDesc = parseFloat(reserva.valor_descuento) || 0;
+    if (reserva.tipo_descuento === 'porcentaje') {
+      descuentoTotal = subtotal * (valDesc / 100);
+    } else if (reserva.tipo_descuento === 'monto_fijo') {
+      descuentoTotal = valDesc;
+    }
+    
+    const totalPagar = subtotal - descuentoTotal;
+
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Subtotal: Bs. ${subtotal.toFixed(2)}`, 140, finalY);
+    
+    if (descuentoTotal > 0) {
+      finalY += 6;
+      doc.setTextColor(220, 38, 38);
+      let textoMotivo = reserva.motivo_descuento ? ` (${reserva.motivo_descuento})` : '';
+      doc.text(`Descuento${textoMotivo}: - Bs. ${descuentoTotal.toFixed(2)}`, 140, finalY);
+    }
+    
+    finalY += 8;
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
-    doc.text(`TOTAL A PAGAR: Bs. ${subtotal.toFixed(2)}`, 140, finalY);
+    doc.text(`TOTAL A PAGAR: Bs. ${totalPagar.toFixed(2)}`, 140, finalY);
 
     // Pie de página
     doc.setFontSize(8);

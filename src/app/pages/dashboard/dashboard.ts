@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service'; 
+import { AlertasService } from '../../services/alertas.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -18,7 +19,16 @@ import Swal from 'sweetalert2';
 })
 export class Dashboard {
   
-  constructor(private authService: AuthService) {}
+  alertasActivas: number = 0;
+
+  constructor(private authService: AuthService, private alertasService: AlertasService) {}
+
+  ngOnInit() {
+    this.alertasService.calcularAlertasGlobales();
+    this.alertasService.alertas$.subscribe(alertas => {
+      this.alertasActivas = alertas.length;
+    });
+  }
 
   cerrarSesion() {
     Swal.fire({

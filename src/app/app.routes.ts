@@ -17,7 +17,7 @@ import { CiudadesComponent } from './pages/ciudades/ciudades';
 import { UsuariosComponent } from './pages/usuarios/usuarios'; 
 import { RolesComponent } from './pages/roles/roles'; 
 import { ConductoresComponent } from './pages/conductores/conductores';
-import { CategoriasLicenciaComponent } from './pages/categorias-licencia/categorias-licencia'; // <-- NUEVA PÁGINA
+import { AsignacionesComponent } from './pages/asignaciones/asignaciones'; // <-- NUEVA PÁGINA
 import { VehiculosComponent } from './pages/vehiculos/vehiculos'; 
 import { ConfigFlotaComponent } from './pages/config-flota/config-flota'; 
 import { ClientesComponent } from './pages/clientes/clientes'; 
@@ -26,6 +26,7 @@ import { ReservasComponent } from './pages/reservas/reservas';
 import { ViajesComponent } from './pages/viajes/viajes';
 import { MonitorFatigaComponent } from './pages/monitor-fatiga/monitor-fatiga'; 
 import { AdminFatigaComponent } from './pages/admin-fatiga/admin-fatiga';
+import { AlertasComponent } from './pages/alertas/alertas'; // <-- NUEVO MÓDULO DE ALERTAS
 
 export const routes: Routes = [
   // 🚀 CAMBIO PRINCIPAL: La ruta vacía ahora muestra la Landing
@@ -50,7 +51,7 @@ export const routes: Routes = [
       { path: 'usuarios', component: UsuariosComponent },
       { path: 'roles', component: RolesComponent },
       { path: 'conductores', component: ConductoresComponent },
-      { path: 'categorias-licencia', component: CategoriasLicenciaComponent },
+      { path: 'asignaciones', component: AsignacionesComponent },
       { path: 'vehiculos', component: VehiculosComponent },
       {path: 'config-flota', component: ConfigFlotaComponent},
       {path: 'clientes', component: ClientesComponent},
@@ -58,7 +59,8 @@ export const routes: Routes = [
       {path: 'reservas', component: ReservasComponent},
       {path: 'viajes', component: ViajesComponent},
       {path: 'monitor-fatiga', component: MonitorFatigaComponent},
-      {path: 'admin-fatiga', component: AdminFatigaComponent}
+      {path: 'admin-fatiga', component: AdminFatigaComponent},
+      {path: 'alertas', component: AlertasComponent}
     ]
   },
   // Si alguien escribe una URL que no existe, lo mandamos al inicio (Landing)

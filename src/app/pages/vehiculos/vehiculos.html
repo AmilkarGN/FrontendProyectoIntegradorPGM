@@ -1,7 +1,10 @@
 <div class="crud-container fade-in">
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Registro de Vehículos (Flota)</h2>
-    <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Vehículo</button>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="mostrarGuiaEstados = true" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Vehículo</button>
+    </div>
   </div>
 
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
@@ -20,21 +23,22 @@
     <thead>
       <tr>
         <th>Foto</th>
-        <th>Placa</th>
-        <th>Marca y Modelo</th>
-        <th>Tipo</th>
-        <th>Estado</th>
-        <th>Acciones</th>
+        <th>Vehículo (Placa y Modelo)</th>
+        <th>Tipo de Unidad</th>
+        <th style="text-align: center;">Estado Operativo</th>
+        <th>Legal (Vencimientos)</th>
+        <th style="text-align: center;">Acciones</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let v of filtrados">
+      <tr *ngFor="let v of filtrados" [class.highlight-row]="alertaDestacada === v.placa">
         <td>
           <img [src]="obtenerImagenUrl(v.foto)" class="vehiculo-img-table" alt="Vehículo">
         </td>
         <td>
           <span class="placa-vehiculo">
             {{ v.placa }}
+            <span *ngIf="alertaDestacada === v.placa" class="material-symbols-rounded alert-icon" title="¡Este registro requiere atención!">info</span>
           </span>
           <br>
           <small style="color: #64748b; margin-top: 5px; display: inline-block;">
@@ -46,13 +50,18 @@
           <small>📦 Cap: {{ v.tipo_detalles?.capacidad_carga_kg }} Kg</small>
         </td>
         <td>
-          <span class="badge" [ngClass]="{
-            'badge-disponible': v.estado_detalles?.nombre === 'Disponible',
-            'badge-ruta': v.estado_detalles?.nombre === 'En Ruta',
-            'badge-taller': v.estado_detalles?.nombre === 'Taller'
-          }">
-            {{ v.estado_detalles?.nombre }}
-          </span>
+          <select 
+            class="status-select" 
+            [ngClass]="{
+              'status-disponible': v.estado === 'Disponible',
+              'status-ruta': v.estado === 'En Ruta',
+              'status-taller': v.estado === 'En Taller' || v.estado === 'Averiado en viaje'
+            }"
+            [(ngModel)]="v.estado" 
+            (change)="cambiarEstadoRapido(v, $event)"
+            title="Cambiar estado rápidamente">
+            <option *ngFor="let e of estados" [value]="e">{{ e }}</option>
+          </select>
         </td>
         <td>
           <div [style.color]="v.vencimiento_soat! < fechaHoy ? '#ef4444' : '#1e293b'">
@@ -148,13 +157,13 @@
         </div>
 
         <div class="form-group">
-          <label>Estado Operativo *</label>
-          <select name="estado" [(ngModel)]="vehiculoActual.estado" required>
-            <option [ngValue]="null" disabled>-- Seleccione Estado --</option>
-            <option *ngFor="let e of estados" [value]="e.id">{{ e.nombre }}</option>
+          <label>Estado Inicial *</label>
+          <select class="form-control" [(ngModel)]="vehiculoActual.estado" name="estado" required>
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let e of estados" [value]="e">{{ e }}</option>
           </select>
-                    <small *ngIf="vehForm.controls['estado']?.invalid && vehForm.controls['estado']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
-          </div>
+          <small *ngIf="vehForm.controls['estado']?.invalid && vehForm.controls['estado']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+        </div>
 
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
@@ -188,4 +197,56 @@
       </div>
     </div>
   </div>
+
+  <div class="crud-modal-overlay" *ngIf="mostrarGuiaEstados">
+    <div class="crud-modal slide-in-bottom modal-lg">
+      <div class="modal-header">
+        <h3>ℹ️ Mapa Visual de Estados: VEHÍCULOS</h3>
+      </div>
+      <div class="guia-contenido" style="line-height: 1.6; color: #334155;">
+        <p>Los vehículos cambian de estado de forma automática al ser vinculados a un Viaje. Sin embargo, en casos de mantenimiento, puedes cambiar el estado manualmente.</p>
+        
+        <div class="flow-guide">
+          <div class="flow-node">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+            <span class="node-title">Disponible</span>
+            <span class="node-desc">Listo para ser asignado.</span>
+          </div>
+          
+          <span class="flow-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></span>
+          
+          <div class="flow-node node-primary">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l3 3v6h-3m-12 0H5m3 0a3 3 0 11-6 0m6 0a3 3 0 106 0m-6 0h6m6 0a3 3 0 11-6 0m6 0h3v-6"/></svg></span>
+            <span class="node-title">En Ruta</span>
+            <span class="node-desc">Trabajando actualmente en un Viaje. Bloqueado para otras asignaciones.</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 15px 0;">
+          <strong style="color: #64748b; font-size: 0.9rem;">MANTENIMIENTO Y CONTINGENCIA</strong>
+        </div>
+
+        <div class="flow-guide" style="background: #fffbeb; border-color: #fef08a;">
+          <div class="flow-node node-warning">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>
+            <span class="node-title">En Taller</span>
+            <span class="node-desc">Mantenimiento preventivo/correctivo. (No puede ser asignado).</span>
+          </div>
+          
+          <span class="flow-arrow" style="color: #fde047; font-size: 0.8rem; font-weight: normal;">O BIEN</span>
+
+          <div class="flow-node node-danger">
+            <span class="node-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>
+            <span class="node-title">Averiado en viaje</span>
+            <span class="node-desc">El vehículo falló en pleno viaje. El conductor debe quedarse resguardándolo.</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions text-center mt-20">
+        <button type="button" class="btn-save w-100" (click)="mostrarGuiaEstados = false">Entendido</button>
+      </div>
+    </div>
+  </div>
+
 </div>
