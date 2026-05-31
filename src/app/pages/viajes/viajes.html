@@ -116,7 +116,10 @@
           <div class="lista-reservas">
              <div *ngFor="let res of reservasPendientes" class="item-reserva">
                 <input type="checkbox" (change)="toggleReserva(res, $event)" class="check-reserva">
-                <span class="res-codigo">{{ res.codigo_reserva }}</span>
+                <div style="display: flex; flex-direction: column; min-width: 90px;">
+                  <span class="res-codigo" style="margin-bottom: 4px;">{{ res.codigo_reserva }}</span>
+                  <span *ngIf="res.grupo_lote" class="badge" style="background: #e0e7ff; color: #4338ca; font-size: 0.65rem; padding: 2px 4px;">📦 {{ res.grupo_lote }}</span>
+                </div>
                 <div class="res-ruta-info">
                   <span class="badge badge-ruta" title="{{ res.direccion_origen }} ➡️ {{ res.direccion_destino }}">
                     {{ res.direccion_origen }} ➡️ {{ res.direccion_destino }}

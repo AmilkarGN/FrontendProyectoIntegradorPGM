@@ -37,6 +37,7 @@ export interface Reserva {
   estado_reserva: number;
   estado_nombre?: string;
   fecha_creacion?: string;
+  grupo_lote?: string | null;
 }
 
 @Injectable({

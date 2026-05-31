@@ -41,6 +41,8 @@
             {{ r.codigo_reserva }}
             <span *ngIf="alertaDestacada === r.codigo_reserva" class="material-symbols-rounded alert-icon" title="¡Este registro requiere atención!">info</span>
           </strong>
+          <br>
+          <span *ngIf="r.grupo_lote" class="badge" style="background: #e0e7ff; color: #4338ca; font-size: 0.75rem; padding: 2px 6px; margin-top: 4px;">📦 {{ r.grupo_lote }}</span>
         </td>
         <td>{{ r.cliente_detalles?.razon_social || r.cliente_detalles?.usuario_detalles?.nombre }}</td>
         <td>
@@ -112,12 +114,18 @@
             </div>
 
             <div class="form-group">
-              <label>Punto de Recojo (Origen) *</label>
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <label>Punto de Recojo (Origen) *</label>
+                <button type="button" *ngIf="cargasEnLote.length > 0" (click)="reutilizarOrigenAnterior()" style="background: none; border: none; color: #4f46e5; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Reutilizar origen anterior</button>
+              </div>
               <input id="origenInput" type="text" name="origen" [(ngModel)]="reservaActual.direccion_origen" placeholder="Busca o haz clic..." required>
             </div>
 
             <div class="form-group">
-              <label>Punto de Entrega (Destino) *</label>
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <label>Punto de Entrega (Destino) *</label>
+                <button type="button" *ngIf="cargasEnLote.length > 0" (click)="reutilizarDestinoAnterior()" style="background: none; border: none; color: #4f46e5; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Reutilizar destino anterior</button>
+              </div>
               <input id="destinoInput" type="text" name="destino" [(ngModel)]="reservaActual.direccion_destino" placeholder="Busca o haz clic..." required>
             </div>
 
@@ -211,9 +219,30 @@
               <p style="margin: 5px 0;">⏱️ Duración Estimada: <strong>{{ reservaActual.tiempo_estimado_horas }} Horas</strong></p>
             </div>
 
+            <!-- SECCIÓN DE LOTES -->
+            <div style="margin-top: 15px; display: flex; justify-content: flex-end;" *ngIf="modoModal === 'crear'">
+              <button type="button" class="btn-action" style="background: #e0e7ff; color: #4338ca; font-weight: 600; padding: 10px 20px; border-radius: 8px;" (click)="agregarAlLote()" *ngIf="reservaActual.direccion_origen && reservaActual.direccion_destino">
+                + Añadir a la Ruta (Confirmar)
+              </button>
+            </div>
+
+            <div *ngIf="cargasEnLote.length > 0" style="margin-top: 20px; padding: 15px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+              <h4 style="margin-top: 0; color: #334155; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 Cargas en este Lote ({{ cargasEnLote.length }})</span>
+                <span class="badge" style="background: #0284c7; color: white;">Total: {{ calcularPesoTotalLote() }} Kg</span>
+              </h4>
+              <div *ngFor="let carga of cargasEnLote; let i = index" style="background: white; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="color: #0f172a;">Carga {{ i + 1 }}</strong> | {{ carga.peso_estimado_kg }} Kg<br>
+                  <small style="color: #64748b;">Recojo: {{ carga.direccion_origen }}</small>
+                </div>
+                <button type="button" (click)="eliminarDelLote(i)" style="background: none; border: none; color: #ef4444; cursor: pointer;" title="Eliminar">🗑️</button>
+              </div>
+            </div>
+
             <div class="modal-actions" style="margin-top: 25px;">
               <button type="button" class="btn-cancel" (click)="mostrarModal = false">Cancelar</button>
-              <button type="submit" class="btn-save">Guardar Reserva</button>
+              <button type="submit" class="btn-save">{{ cargasEnLote.length > 0 ? 'Guardar Lote (' + (cargasEnLote.length + (reservaActual.direccion_origen ? 1 : 0)) + ')' : (modoModal === 'crear' ? 'Guardar Reserva' : 'Guardar Cambios') }}</button>
             </div>
           </form>
         </div>

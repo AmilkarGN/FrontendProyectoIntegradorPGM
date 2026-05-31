@@ -33,6 +33,9 @@ export class ReservasComponent implements OnInit {
   mostrarModal = false;
   reservaActual: any = {};
   
+  // Lógica de Lotes (Cargas Múltiples)
+  cargasEnLote: any[] = [];
+
   unidadPeso: 'kg' | 'qq' = 'kg';
   inputPesoLocal: number = 0;
   
@@ -303,6 +306,7 @@ export class ReservasComponent implements OnInit {
       valor_descuento: 0,
       motivo_descuento: ''
     };
+    this.cargasEnLote = [];
     this.tiempoConduccionPura = 0;
     this.unidadPeso = 'kg';
     this.inputPesoLocal = 0;
@@ -512,57 +516,202 @@ export class ReservasComponent implements OnInit {
     this.reservaActual.tiempo_estimado_horas = parseFloat(tiempoTotalReal.toFixed(2));
   }
 
-  // --- GUARDAR O ACTUALIZAR RESERVA ---
-  guardar(): void {
-    // Aplicamos la conversión a Kg final
-    this.reservaActual.peso_estimado_kg = Number(this.pesoEnKg);
+  // --- LÓGICA DE LOTES ---
+  agregarAlLote() {
+    if (!this.reservaActual.direccion_origen || !this.reservaActual.direccion_destino) {
+      Swal.fire('Atención', 'Debe seleccionar un origen y destino primero.', 'warning');
+      return;
+    }
+    
+    const carga = {
+      direccion_origen: this.reservaActual.direccion_origen,
+      latitud_origen: this.reservaActual.latitud_origen,
+      longitud_origen: this.reservaActual.longitud_origen,
+      direccion_destino: this.reservaActual.direccion_destino,
+      latitud_destino: this.reservaActual.latitud_destino,
+      longitud_destino: this.reservaActual.longitud_destino,
+      distancia_real_km: this.reservaActual.distancia_real_km,
+      tiempo_estimado_horas: this.reservaActual.tiempo_estimado_horas,
+      peso_estimado_kg: this.pesoEnKg,
+      descripcion_carga: this.reservaActual.descripcion_carga,
+      es_fragil: this.reservaActual.es_fragil,
+      contacto_destino: this.reservaActual.contacto_destino,
+      telefono_destino: this.reservaActual.telefono_destino
+    };
 
-    // Limpiamos los campos anidados que Django podría rechazar
-    const payload = { ...this.reservaActual };
-    delete payload.cliente_detalles;
-    delete payload.ruta_macro_detalles;
-    delete payload.estado_nombre;
-    delete payload.fecha_creacion;
-    delete payload.peso_export; // por si acaso
-    if (typeof payload.cliente === 'object' && payload.cliente !== null) {
-      payload.cliente = payload.cliente.id;
+    this.cargasEnLote.push(carga);
+
+    // UX: Limpiar origen y destino para la siguiente entrada
+    this.reservaActual.direccion_origen = '';
+    this.reservaActual.latitud_origen = null;
+    this.reservaActual.longitud_origen = null;
+    
+    this.reservaActual.direccion_destino = '';
+    this.reservaActual.latitud_destino = null;
+    this.reservaActual.longitud_destino = null;
+
+    this.reservaActual.distancia_real_km = null;
+    this.reservaActual.tiempo_estimado_horas = null;
+    this.reservaActual.descripcion_carga = '';
+    this.reservaActual.es_fragil = false;
+    this.inputPesoLocal = 0;
+    
+    if (this.marcadorOrigen) {
+      this.marcadorOrigen.setMap(null);
+      this.marcadorOrigen = null;
+    }
+    if (this.directionsRenderer) {
+      this.directionsRenderer.setDirections({routes: []});
     }
 
-    // Si la reserva NO tiene código, significa que es NUEVA
-    if (!payload.codigo_reserva) {
-      payload.codigo_reserva = 'RES-' + Math.floor(Math.random() * 1000000);
-      payload.estado_reserva = 1; // 1 = Pendiente
-      
-      this.reservaService.crearReserva(payload).subscribe({
-        next: () => {
-          this.cargarDatos();
-          this.mostrarModal = false;
-          Swal.fire('¡Éxito!', 'Reserva creada con éxito', 'success');
-        },
-        error: (err) => {
-          console.error('Error de Django al CREAR:', err.error);
-          Swal.fire('Error', 'Error al crear la reserva. Revisa la consola.', 'error');
-        }
+    Swal.fire('Agregada', 'Carga guardada en la lista. Puedes ingresar el siguiente recojo.', 'success');
+  }
+
+  reutilizarOrigenAnterior() {
+    if (this.cargasEnLote.length === 0) return;
+    const ultimaCarga = this.cargasEnLote[this.cargasEnLote.length - 1];
+    
+    this.reservaActual.direccion_origen = ultimaCarga.direccion_origen;
+    this.reservaActual.latitud_origen = ultimaCarga.latitud_origen;
+    this.reservaActual.longitud_origen = ultimaCarga.longitud_origen;
+    
+    if (this.marcadorOrigen) this.marcadorOrigen.setMap(null);
+    if (this.reservaActual.latitud_origen && this.reservaActual.longitud_origen) {
+      const latLng = new google.maps.LatLng(this.reservaActual.latitud_origen, this.reservaActual.longitud_origen);
+      this.marcadorOrigen = new google.maps.Marker({
+        position: latLng,
+        map: this.map,
+        label: { text: 'A', color: 'white', fontWeight: 'bold' },
+        title: 'Punto de Recojo'
       });
+      this.map.setCenter(latLng);
+    }
+    this.trazarRuta();
+  }
+
+  reutilizarDestinoAnterior() {
+    if (this.cargasEnLote.length === 0) return;
+    const ultimaCarga = this.cargasEnLote[this.cargasEnLote.length - 1];
+    
+    this.reservaActual.direccion_destino = ultimaCarga.direccion_destino;
+    this.reservaActual.latitud_destino = ultimaCarga.latitud_destino;
+    this.reservaActual.longitud_destino = ultimaCarga.longitud_destino;
+    
+    this.reservaActual.contacto_destino = ultimaCarga.contacto_destino;
+    this.reservaActual.telefono_destino = ultimaCarga.telefono_destino;
+
+    this.trazarRuta();
+  }
+
+  eliminarDelLote(index: number) {
+    this.cargasEnLote.splice(index, 1);
+  }
+
+  calcularPesoTotalLote() {
+    let total = this.cargasEnLote.reduce((acc, curr) => acc + (parseFloat(curr.peso_estimado_kg) || 0), 0);
+    total += parseFloat(this.pesoEnKg.toString()) || 0; 
+    return total;
+  }
+
+  // --- GUARDAR O ACTUALIZAR RESERVA ---
+  guardar(): void {
+    // Si estamos editando una sola reserva (no un lote)
+    if (this.reservaActual.codigo_reserva) {
+      this.reservaActual.peso_estimado_kg = this.pesoEnKg;
       
-    } else {
-      // Si la reserva YA TIENE código, significa que la estamos EDITANDO
-      this.reservaService.actualizarReserva(payload.codigo_reserva, payload).subscribe({
+      const payload = { ...this.reservaActual };
+      delete payload.cliente_detalles;
+      delete payload.ruta_macro_detalles;
+      delete payload.estado_nombre;
+      delete payload.fecha_creacion;
+      delete payload.peso_export;
+      if (typeof payload.cliente === 'object' && payload.cliente !== null) {
+        payload.cliente = payload.cliente.id;
+      }
+
+      this.reservaService.actualizarReserva(this.reservaActual.codigo_reserva, payload).subscribe({
         next: () => {
           this.cargarDatos();
           this.mostrarModal = false;
           Swal.fire('¡Éxito!', 'Reserva actualizada con éxito', 'success');
         },
         error: (err) => {
-          console.error('Error de Django al ACTUALIZAR:', err.error);
-          let mensaje = 'Error al actualizar la reserva.';
-          if (err.error && typeof err.error === 'object') {
-            mensaje += ' Detalles: ' + JSON.stringify(err.error);
-          }
-          Swal.fire('Error', mensaje, 'error');
+          console.error('Error al actualizar:', err);
+          Swal.fire('Error', 'No se pudo actualizar la reserva.', 'error');
         }
       });
+      return;
     }
+
+    // SI ES CREACIÓN MÚLTIPLE O SIMPLE (Lote)
+    
+    // 1. Añadimos lo que esté en el input actualmente al array si es válido
+    if (this.reservaActual.direccion_origen && this.reservaActual.direccion_destino && this.pesoEnKg > 0) {
+      const cargaActual = {
+        direccion_origen: this.reservaActual.direccion_origen,
+        latitud_origen: this.reservaActual.latitud_origen,
+        longitud_origen: this.reservaActual.longitud_origen,
+        direccion_destino: this.reservaActual.direccion_destino,
+        latitud_destino: this.reservaActual.latitud_destino,
+        longitud_destino: this.reservaActual.longitud_destino,
+        distancia_real_km: this.reservaActual.distancia_real_km,
+        tiempo_estimado_horas: this.reservaActual.tiempo_estimado_horas,
+        peso_estimado_kg: this.pesoEnKg,
+        descripcion_carga: this.reservaActual.descripcion_carga,
+        es_fragil: this.reservaActual.es_fragil,
+        contacto_destino: this.reservaActual.contacto_destino,
+        telefono_destino: this.reservaActual.telefono_destino
+      };
+      this.cargasEnLote.push(cargaActual);
+      // Limpiar inputs
+      this.reservaActual.direccion_origen = '';
+      this.inputPesoLocal = 0;
+    }
+
+    if (this.cargasEnLote.length === 0) {
+      Swal.fire('Atención', 'Debe rellenar al menos una carga (origen, destino y peso) para guardar la reserva.', 'warning');
+      return;
+    }
+
+    // Generar un ID de lote si hay más de 1 carga
+    const esLote = this.cargasEnLote.length > 1;
+    const grupoLote = esLote ? `LOTE-${Math.random().toString(36).substr(2, 6).toUpperCase()}` : null;
+
+    // Crear promesas para cada carga
+    const promesasGuardado = this.cargasEnLote.map(carga => {
+      // Combinar los campos base con los específicos
+      const payload = {
+        codigo_reserva: 'RES-' + Math.floor(Math.random() * 1000000),
+        cliente: typeof this.reservaActual.cliente === 'object' && this.reservaActual.cliente !== null ? this.reservaActual.cliente.id : this.reservaActual.cliente,
+        fecha_tentativa_viaje: this.reservaActual.fecha_tentativa_viaje,
+        tarifa_qq_aplicada: this.reservaActual.tarifa_qq_aplicada,
+        tipo_descuento: this.reservaActual.tipo_descuento,
+        valor_descuento: this.reservaActual.valor_descuento,
+        motivo_descuento: this.reservaActual.motivo_descuento,
+        terminos_pago: this.reservaActual.terminos_pago,
+        estado_reserva: 1, // Pendiente
+        grupo_lote: grupoLote, 
+        ...carga
+      };
+      return this.reservaService.crearReserva(payload).toPromise();
+    });
+
+    // Ejecutar todas las creaciones
+    Promise.all(promesasGuardado)
+      .then(() => {
+        this.cargarDatos();
+        this.mostrarModal = false;
+        if (esLote) {
+          Swal.fire('Lote Guardado', `Se han generado ${this.cargasEnLote.length} reservas bajo el identificador ${grupoLote}`, 'success');
+        } else {
+          Swal.fire('¡Éxito!', 'Reserva creada con éxito', 'success');
+        }
+        this.cargasEnLote = [];
+      })
+      .catch((err) => {
+        console.error('Error guardando lote de reservas:', err);
+        Swal.fire('Error', 'Ocurrió un problema al guardar las reservas. Por favor, verifica los datos e intenta de nuevo.', 'error');
+      });
   }
 
   // --- ELIMINAR RESERVA ---
