@@ -26,7 +26,7 @@
         <tr>
           <th>ID Viaje</th>
           <th>Equipo y Cargas</th>
-          <th>Fechas</th>
+          <th>Ruta y Fechas</th>
           <th style="text-align: center;">Estado Actual</th>
           <th style="text-align: center;">Acciones Rápidas</th>
         </tr>
@@ -45,6 +45,7 @@
             <span class="text-piloto">👨‍💼 {{ v.conductor_nombre }}</span>
           </td>
           <td>
+            <div class="text-ruta" style="color: #4f46e5; font-weight: 600; margin-bottom: 5px;">📍 {{ v.ruta_nombre }}</div>
             <div class="text-fecha"><strong>Salida:</strong> {{ v.fecha_salida ? (v.fecha_salida | date:'short') : 'Por definir' }}</div>
             <div class="text-fecha"><strong>Llegada:</strong> {{ v.fecha_llegada_estimada ? (v.fecha_llegada_estimada | date:'short') : 'Por definir' }}</div>
           </td>

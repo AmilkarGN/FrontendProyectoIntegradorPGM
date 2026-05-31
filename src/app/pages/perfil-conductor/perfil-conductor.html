@@ -1,0 +1,95 @@
+<div class="perfil-container fade-in">
+  <div class="header-section">
+    <h2>Mi Cuenta y Vehículo</h2>
+    <p>Consulta tus credenciales y el estado de tu unidad asignada.</p>
+  </div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <span class="material-symbols-rounded spin">sync</span> Cargando tu información...
+  </div>
+
+  <div *ngIf="error" class="error-state">
+    <span class="material-symbols-rounded">error</span> {{ error }}
+  </div>
+
+  <div *ngIf="!cargando && perfil" class="perfil-layout">
+    
+    <div class="tabs">
+      <button class="tab-btn" [class.active]="tabActivo === 'perfil'" (click)="tabActivo = 'perfil'">
+        <span class="material-symbols-rounded">badge</span> Mi Perfil
+      </button>
+      <button class="tab-btn" [class.active]="tabActivo === 'vehiculo'" (click)="tabActivo = 'vehiculo'">
+        <span class="material-symbols-rounded">local_shipping</span> Mi Unidad
+      </button>
+    </div>
+
+    <!-- CREDENCIAL DEL CONDUCTOR -->
+    <div class="glass card-credencial fade-in" *ngIf="tabActivo === 'perfil'">
+      <div class="card-header">
+        <div class="avatar-container">
+          <img *ngIf="perfil.usuario_detalles?.foto_perfil" [src]="perfil.usuario_detalles.foto_perfil" alt="Foto de Perfil" class="profile-img">
+          <span *ngIf="!perfil.usuario_detalles?.foto_perfil" class="material-symbols-rounded icon-large">badge</span>
+        </div>
+        <h3>Credencial Digital</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="label">Nombre:</span>
+          <span class="value">{{ perfil.usuario_detalles?.nombre || 'Desconocido' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Correo:</span>
+          <span class="value">{{ perfil.usuario_detalles?.email || 'N/A' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Licencia:</span>
+          <span class="value badge-blue">{{ perfil.licencia }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Categoría:</span>
+          <span class="value">{{ perfil.categoria_detalles?.nombre || 'No asignada' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Vencimiento:</span>
+          <span class="value">{{ perfil.vencimiento_licencia || 'Desconocido' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VEHICULO ASIGNADO -->
+    <div class="glass card-vehiculo fade-in" *ngIf="tabActivo === 'vehiculo'">
+      <div class="card-header">
+        <div class="avatar-container">
+          <img *ngIf="perfil.vehiculo_asignado?.vehiculo_foto" [src]="perfil.vehiculo_asignado.vehiculo_foto" alt="Foto del Vehículo" class="vehicle-img">
+          <span *ngIf="!perfil.vehiculo_asignado?.vehiculo_foto" class="material-symbols-rounded icon-large">local_shipping</span>
+        </div>
+        <h3>Unidad Asignada</h3>
+      </div>
+      
+      <div *ngIf="perfil.vehiculo_asignado" class="card-body">
+        <div class="info-row">
+          <span class="label">Placa / Tipo:</span>
+          <span class="value badge-green">{{ perfil.vehiculo_asignado.vehiculo_info }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Capacidad:</span>
+          <span class="value">{{ perfil.vehiculo_asignado.vehiculo_capacidad }} Kg</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Categoría Vehículo:</span>
+          <span class="value">{{ perfil.vehiculo_asignado.vehiculo_tipo }}</span>
+        </div>
+        <div class="info-row" *ngIf="perfil.vehiculo_asignado.observaciones">
+          <span class="label">Observaciones:</span>
+          <span class="value">{{ perfil.vehiculo_asignado.observaciones }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="!perfil.vehiculo_asignado" class="empty-vehiculo">
+        <span class="material-symbols-rounded">no_crash</span>
+        <p>No tienes ningún vehículo asignado actualmente.</p>
+      </div>
+    </div>
+
+  </div>
+</div>

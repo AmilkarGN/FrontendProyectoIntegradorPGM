@@ -1,15 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router'; // 👈 Importamos el Router
+import { Router } from '@angular/router';
 
 import { DashboardCliente } from '../dashboard-cliente/dashboard-cliente';
+import { DashboardConductor } from '../dashboard-conductor/dashboard-conductor';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [CommonModule, DashboardCliente],
+  imports: [CommonModule, DashboardCliente, DashboardConductor],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css'],
 })
@@ -26,16 +27,18 @@ export class Inicio implements OnInit {
   saludo: string = '';
   fechaActual: string = '';
   esCliente: boolean = false;
+  esConductor: boolean = false;
 
-  constructor(private http: HttpClient, private router: Router, private authService: AuthService) {}
+  constructor(private http: HttpClient, private router: Router, public authService: AuthService) {}
 
   ngOnInit(): void {
     this.esCliente = this.authService.tieneRol('Cliente');
+    this.esConductor = this.authService.tieneRol('Conductor');
     
-    if (!this.esCliente) {
+    if (!this.esCliente && !this.esConductor) {
       this.obtenerMetricas();
     } else {
-      // El dashboard del cliente maneja su propia carga
+      // El dashboard del cliente y conductor manejan su propia carga
       this.cargando = false;
     }
     this.generarSaludo();

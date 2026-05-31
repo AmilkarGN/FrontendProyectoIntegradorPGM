@@ -70,8 +70,21 @@ export class AlertasService {
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
 
+      const esConductor = this.authService.tieneRol('Conductor');
+      const usr = this.authService.getUsuarioActual();
+      let misViajesIDs: string[] = [];
+      
+      // Si es conductor, identificar cuáles son sus viajes 
+      if (esConductor) {
+        // En frontend no tenemos una forma directa sincrónica de saber qué viajes son del conductor sin filtrar el array completo
+        // Filtramos viajes asumiendo que asignacion.conductor.usuario.id == usr.id
+        misViajesIDs = viajes.filter(v => 
+          v.asignacion && v.asignacion.conductor && v.asignacion.conductor.usuario && v.asignacion.conductor.usuario.id === usr?.id
+        ).map(v => v.codigo_viaje);
+      }
+
       // 1. VEHÍCULOS (Solo Admin)
-      if (this.authService.tienePermiso('gestionar_vehiculos')) {
+      if (!esConductor && this.authService.tienePermiso('gestionar_vehiculos')) {
         vehiculos.forEach(v => {
           if (v.vencimiento_soat) {
             const fSoat = new Date(v.vencimiento_soat);
@@ -95,25 +108,30 @@ export class AlertasService {
         });
       }
 
-      // 2. CONDUCTORES (Solo Admin)
-      if (this.authService.tienePermiso('gestionar_conductores')) {
+      // 2. CONDUCTORES (Admin ve todos, Conductor ve el suyo)
+      if (this.authService.tienePermiso('gestionar_conductores') || esConductor) {
         conductores.forEach(c => {
+          // c.usuario viene como ID (number) según la interfaz, por lo que TS rechaza acceder a .id
+          const usuarioId = (c as any).usuario?.id ? (c as any).usuario.id : c.usuario;
+          if (esConductor && usuarioId !== usr?.id) return; // Solo procesar su propio perfil
+
           if (c.vencimiento_licencia) {
             const fLic = new Date(c.vencimiento_licencia);
             const diffDias = this.diferenciaDias(hoy, fLic);
             if (diffDias < 0) {
               const nom = c.usuario_detalles?.nombre || 'Desconocido';
-              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'critica', titulo: `Licencia Vencida (${nom})`, mensaje: `La licencia caducó el ${c.vencimiento_licencia}`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
+              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'critica', titulo: `Licencia Vencida (${nom})`, mensaje: `La licencia caducó el ${c.vencimiento_licencia}`, fechaRef: c.vencimiento_licencia, enlace: esConductor ? '/dashboard/perfil' : '/dashboard/conductores', registroId: c.id! });
             } else if (diffDias <= 30) {
               const nom = c.usuario_detalles?.nombre || 'Desconocido';
-              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'preventiva', titulo: `Licencia por Vencer (${nom})`, mensaje: `Caduca en ${diffDias} días.`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
+              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'preventiva', titulo: `Licencia por Vencer (${nom})`, mensaje: `Caduca en ${diffDias} días.`, fechaRef: c.vencimiento_licencia, enlace: esConductor ? '/dashboard/perfil' : '/dashboard/conductores', registroId: c.id! });
             }
           }
         });
       }
 
-      // 3. RESERVAS
-      reservas.forEach(r => {
+      // 3. RESERVAS (Solo Admin)
+      if (!esConductor) {
+        reservas.forEach(r => {
         if (r.fecha_tentativa_viaje && r.estado_reserva === 1) { // 1 = Pendiente
           const fRes = new Date(r.fecha_tentativa_viaje);
           // Si la fecha solicitada ya pasó o es hoy, y sigue pendiente...
@@ -125,26 +143,40 @@ export class AlertasService {
           }
         }
       });
+      }
 
-      // 4. VIAJES
+      // 4. VIAJES (Admin ve todos, Conductor ve los suyos)
       viajes.forEach(v => {
+        if (esConductor && !misViajesIDs.includes(v.codigo_viaje)) return; // Conductor solo ve sus viajes
+
         if (v.estado_nombre === 'Programado' && v.fecha_salida) {
-          const fSal = new Date(v.fecha_salida);
-          if (fSal.getTime() < new Date().getTime()) { // Usamos hora real aquí
-            alertasNuevas.push({ id: 'vi_s_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'critica', titulo: `Retraso de Salida (${v.codigo_viaje})`, mensaje: `Debió salir a las ${fSal.toLocaleString()}`, fechaRef: v.fecha_salida, enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+          if (esConductor) {
+            // Alerta de Nuevo Viaje Asignado
+            alertasNuevas.push({ id: 'vi_n_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'preventiva', titulo: `Nuevo Viaje Asignado`, mensaje: `Tienes un viaje programado para salir el ${new Date(v.fecha_salida).toLocaleString()}`, fechaRef: v.fecha_salida, enlace: '/dashboard/inicio', registroId: v.codigo_viaje });
+          } else {
+            const fSal = new Date(v.fecha_salida);
+            if (fSal.getTime() < new Date().getTime()) { // Usamos hora real aquí
+              alertasNuevas.push({ id: 'vi_s_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'critica', titulo: `Retraso de Salida (${v.codigo_viaje})`, mensaje: `Debió salir a las ${fSal.toLocaleString()}`, fechaRef: v.fecha_salida, enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+            }
           }
         }
         
         if (v.estado_nombre === 'En Curso' && v.fecha_llegada_estimada) {
-          const fLleg = new Date(v.fecha_llegada_estimada);
-          if (fLleg.getTime() < new Date().getTime()) {
-            alertasNuevas.push({ id: 'vi_l_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'critica', titulo: `Demora en Ruta (${v.codigo_viaje})`, mensaje: `Debió llegar a las ${fLleg.toLocaleString()}`, fechaRef: v.fecha_llegada_estimada, enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+          if (!esConductor) {
+            const fLleg = new Date(v.fecha_llegada_estimada);
+            if (fLleg.getTime() < new Date().getTime()) {
+              alertasNuevas.push({ id: 'vi_l_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'critica', titulo: `Demora en Ruta (${v.codigo_viaje})`, mensaje: `Debió llegar a las ${fLleg.toLocaleString()}`, fechaRef: v.fecha_llegada_estimada, enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+            }
           }
         }
         
         if (v.estado_nombre === 'Finalizado') {
-          // Alertar sobre un viaje recién finalizado que quizás necesite cierre contable
-          alertasNuevas.push({ id: 'vi_f_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'preventiva', titulo: `Viaje Finalizado (${v.codigo_viaje})`, mensaje: `El viaje concluyó. Revisar viáticos y rendimiento.`, fechaRef: v.fecha_salida || 'Reciente', enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+          if (esConductor) {
+             alertasNuevas.push({ id: 'vi_f_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'preventiva', titulo: `Viaje Finalizado`, mensaje: `Has completado el viaje ${v.codigo_viaje}.`, fechaRef: v.fecha_salida || 'Reciente', enlace: '/dashboard/inicio', registroId: v.codigo_viaje });
+          } else {
+            // Alertar sobre un viaje recién finalizado que quizás necesite cierre contable
+            alertasNuevas.push({ id: 'vi_f_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'preventiva', titulo: `Viaje Finalizado (${v.codigo_viaje})`, mensaje: `El viaje concluyó. Revisar viáticos y rendimiento.`, fechaRef: v.fecha_salida || 'Reciente', enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+          }
         }
       });
 

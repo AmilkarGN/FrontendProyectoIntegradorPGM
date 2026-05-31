@@ -24,6 +24,7 @@ export class Dashboard {
   mostrarNotificaciones: boolean = false;
 
   esCliente: boolean = false;
+  esConductor: boolean = false;
   nombreUsuario: string = 'Usuario';
   rolUsuario: string = 'Rol';
 
@@ -31,10 +32,11 @@ export class Dashboard {
 
   ngOnInit() {
     this.esCliente = this.authService.tieneRol('Cliente');
+    this.esConductor = this.authService.tieneRol('Conductor');
     const user = this.authService.getUsuarioActual();
     if (user) {
       this.nombreUsuario = user.nombre || user.username;
-      this.rolUsuario = user.rol || 'Sin Rol';
+      this.rolUsuario = typeof user.rol === 'string' ? user.rol : (user.rol?.nombre_rol || 'Sin Rol');
     }
     
     this.alertasService.calcularAlertasGlobales();

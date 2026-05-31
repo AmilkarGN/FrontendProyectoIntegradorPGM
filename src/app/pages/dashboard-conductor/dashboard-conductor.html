@@ -1,0 +1,45 @@
+<div class="conductor-dashboard fade-in">
+  <div class="dashboard-header-glass">
+    <div class="header-text">
+      <h2 class="title">Estadísticas de Conducción</h2>
+      <p class="subtitle">Resumen de tu rendimiento y viajes realizados.</p>
+    </div>
+    
+    <div class="filter-toggles">
+      <button class="btn-outline" [class.btn-primary]="!mesActual" (click)="toggleFiltro(false)">Histórico Total</button>
+      <button class="btn-outline" [class.btn-primary]="mesActual" (click)="toggleFiltro(true)">Mes Actual</button>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="empty-state">
+    <span class="material-symbols-rounded spin">sync</span>
+    <h3>Calculando estadísticas...</h3>
+  </div>
+
+  <div *ngIf="!cargando && error" class="empty-state error-state">
+    <span class="material-symbols-rounded">error</span>
+    <h3>{{ error }}</h3>
+  </div>
+
+  <div *ngIf="!cargando && !error && estadisticas" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+    
+    <div class="stat-card glass" style="padding: 25px; border-radius: 16px; text-align: center;">
+      <span class="material-symbols-rounded" style="font-size: 3rem; color: #3b82f6; margin-bottom: 10px;">route</span>
+      <h3 style="font-size: 2.5rem; margin: 0; color: #1e293b;">{{ estadisticas.total_viajes }}</h3>
+      <p style="color: #64748b; font-weight: 500; margin-top: 5px;">Viajes Asignados</p>
+    </div>
+
+    <div class="stat-card glass" style="padding: 25px; border-radius: 16px; text-align: center;">
+      <span class="material-symbols-rounded" style="font-size: 3rem; color: #10b981; margin-bottom: 10px;">verified</span>
+      <h3 style="font-size: 2.5rem; margin: 0; color: #1e293b;">{{ estadisticas.viajes_completados }}</h3>
+      <p style="color: #64748b; font-weight: 500; margin-top: 5px;">Viajes Finalizados</p>
+    </div>
+
+    <div class="stat-card glass" style="padding: 25px; border-radius: 16px; text-align: center;">
+      <span class="material-symbols-rounded" style="font-size: 3rem; color: #f59e0b; margin-bottom: 10px;">package_2</span>
+      <h3 style="font-size: 2.5rem; margin: 0; color: #1e293b;">{{ estadisticas.cargas_entregadas }}</h3>
+      <p style="color: #64748b; font-weight: 500; margin-top: 5px;">Cargas Entregadas</p>
+    </div>
+
+  </div>
+</div>

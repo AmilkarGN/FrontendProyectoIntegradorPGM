@@ -58,7 +58,9 @@ export class AuthService {
 
   tieneRol(rol: string): boolean {
     const user = this.getUsuarioActual();
-    return user && user.rol === rol;
+    if (!user) return false;
+    const rolStr = (typeof user.rol === 'string') ? user.rol : (user.rol?.nombre_rol || '');
+    return rolStr === rol;
   }
 
   tienePermiso(permiso: string): boolean {

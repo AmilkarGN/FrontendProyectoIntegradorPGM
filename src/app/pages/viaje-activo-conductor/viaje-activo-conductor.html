@@ -1,0 +1,160 @@
+<div class="conductor-dashboard fade-in">
+  <div class="dashboard-header-glass">
+    <div class="header-text">
+      <h2 class="title">Mi Panel de Conducción</h2>
+      <p class="subtitle">Gestiona tu viaje actual y reporta novedades en ruta.</p>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="empty-state">
+    <span class="material-symbols-rounded spin">sync</span>
+    <h3>Sincronizando Sistema...</h3>
+    <p>Cargando información de tu unidad.</p>
+  </div>
+
+  <div *ngIf="!cargando && viajesActivos.length === 0" class="empty-state">
+    <span class="material-symbols-rounded">local_shipping</span>
+    <h3>Sin Viajes Asignados</h3>
+    <p>Actualmente estás a la espera de un despacho. Se te notificará cuando tengas un viaje programado.</p>
+  </div>
+
+  <div *ngIf="!cargando && viajesActivos.length > 0 && !viajeSeleccionado" class="trip-list-container">
+    <h3><span class="material-symbols-rounded" style="color: #4f46e5; vertical-align: middle;">format_list_bulleted</span> Selecciona un viaje a realizar</h3>
+    <div class="trip-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px;">
+      <div class="trip-card glass" *ngFor="let viaje of viajesActivos" (click)="seleccionarViaje(viaje)" style="padding: 20px; border-radius: 16px; cursor: pointer; transition: all 0.3s;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h4 style="margin: 0; color: #1e293b;">Viaje #{{ viaje.codigo_viaje }}</h4>
+          <span class="badge badge-blue">{{ viaje.estado_nombre }}</span>
+        </div>
+        <p style="margin: 0; color: #64748b; font-size: 0.9rem;">
+          <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">map</span>
+          {{ viaje.ruta_nombre || 'Ruta no especificada' }}
+        </p>
+        <p style="margin: 5px 0 0; color: #64748b; font-size: 0.9rem;">
+          <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">calendar_month</span>
+          Salida: {{ viaje.fecha_salida ? (viaje.fecha_salida | date:'short') : 'No definida' }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!cargando && viajeSeleccionado" class="active-trip-view">
+    <button class="btn-outline" (click)="volverListaViajes()" style="margin-bottom: 15px;" *ngIf="viajesActivos.length > 1">
+      <span class="material-symbols-rounded">arrow_back</span> Volver a mis viajes
+    </button>
+
+    <div class="active-trip-card glass">
+    <h3>
+      <span class="material-symbols-rounded">local_shipping</span>
+      Viaje #{{ viajeActivo.codigo_viaje }}
+    </h3>
+
+    <div class="trip-details">
+      <div class="detail-item">
+        <span class="material-symbols-rounded">map</span>
+        <div class="detail-text">
+          <small>Ruta Asignada</small>
+          <p>{{ viajeActivo.ruta_nombre || 'Ruta no especificada' }}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="material-symbols-rounded">directions_car</span>
+        <div class="detail-text">
+          <small>Unidad</small>
+          <p>{{ viajeActivo.vehiculo_placa }}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="material-symbols-rounded">info</span>
+        <div class="detail-text">
+          <small>Estado Actual</small>
+          <span class="badge" [ngClass]="{
+            'badge-blue': viajeActivo.estado_nombre === 'Programado',
+            'badge-green': viajeActivo.estado_nombre === 'En Curso',
+            'badge-purple': viajeActivo.estado_nombre === 'En Espera',
+            'badge-gray': viajeActivo.estado_nombre === 'Cancelado'
+          }">{{ viajeActivo.estado_nombre }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button *ngIf="viajeActivo.estado_nombre === 'Programado' || viajeActivo.estado_nombre === 'En Espera'" class="btn-primary start-btn" (click)="cambiarEstado('En Curso')" [disabled]="!todasCargasRecogidas()" [title]="!todasCargasRecogidas() ? 'Debes recoger todas las cargas antes de iniciar ruta' : ''">
+        <span class="material-symbols-rounded">play_circle</span>
+        Iniciar Viaje
+      </button>
+
+      <button *ngIf="viajeActivo.estado_nombre === 'En Curso'" class="btn-primary finish-btn" (click)="cambiarEstado('Finalizado')">
+        <span class="material-symbols-rounded">check_circle</span>
+        Reportar Llegada a Destino
+      </button>
+
+      <div class="secondary-actions" *ngIf="viajeActivo.estado_nombre === 'En Curso'">
+        <button class="btn-outline" (click)="actualizarGPS()">
+          <span class="material-symbols-rounded">my_location</span> Transmitir GPS Manual
+        </button>
+        <button class="btn-outline btn-danger" (click)="cambiarEstado('Averiado en viaje')">
+          <span class="material-symbols-rounded">warning</span> Reportar Siniestro
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!cargando && viajeActivo" class="mapa-container glass">
+    <h3><span class="material-symbols-rounded">route</span> Tu Ruta Asignada</h3>
+    <div class="map-wrapper" style="border-radius: 16px; overflow: hidden; height: 350px;">
+      <google-map [options]="mapOptions" width="100%" height="350px"></google-map>
+    </div>
+  </div>
+
+  <div *ngIf="!cargando && viajeActivo && viajeActivo.reservas_detalle?.length > 0" class="cargas-container glass">
+    <h3><span class="material-symbols-rounded">inventory_2</span> Cargas a Recoger ({{viajeActivo.reservas_detalle.length}})</h3>
+    
+    <div class="carga-card" *ngFor="let res of viajeActivo.reservas_detalle">
+      <div class="carga-header">
+        <span class="reserva-id">{{ res.codigo_reserva }}</span>
+        <span class="badge" [ngClass]="{'fragil': res.es_fragil, 'badge-gray': !res.es_fragil}">{{ res.es_fragil ? '⚠️ Frágil' : '📦 Estándar' }}</span>
+      </div>
+      
+      <div class="carga-body">
+        <p><strong>Remitente/Cliente:</strong> {{ res.cliente_nombre || 'No especificado' }}</p>
+        <p><strong>Descripción:</strong> {{ res.descripcion_carga || 'Sin descripción' }}</p>
+        <p><strong>Peso de la Carga:</strong> {{ res.peso_estimado_kg }} Kg</p>
+        
+        <div class="carga-ruta" style="display: block;">
+          <div class="ubicacion">
+            <span class="dot origin"></span>
+            <div>
+              <small>Lugar de Recojo (Punto A)</small>
+              <p>{{ res.direccion_origen }}</p>
+              <button class="btn-text-sm" (click)="enfocarEnMapa(res.latitud_origen, res.longitud_origen)" style="color: #4f46e5; border: none; background: none; padding: 0; font-size: 0.8rem; cursor: pointer; text-decoration: underline; margin-top: 3px;">
+                <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">my_location</span> Ver Ubicación a Recoger
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="carga-actions" style="margin-top: 15px; display: flex; gap: 10px; align-items: center; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+          <span class="badge" [ngClass]="{
+            'badge-gray': res.estado_nombre === 'Pendiente',
+            'badge-green': res.estado_nombre === 'Confirmada',
+            'badge-blue': res.estado_nombre === 'En Tránsito',
+            'badge-purple': res.estado_nombre === 'Entregada'
+          }">{{ res.estado_nombre || 'Pendiente' }}</span>
+          
+          <div style="flex-grow: 1;"></div>
+
+          <button *ngIf="res.estado_nombre !== 'En Tránsito' && res.estado_nombre !== 'Entregada'" class="btn-outline" (click)="cambiarEstadoReserva(res, 'En Tránsito')" style="padding: 6px 12px; font-size: 0.85rem;">
+            <span class="material-symbols-rounded" style="font-size: 1.2rem;">local_shipping</span> Ya la recogí
+          </button>
+          
+          <button *ngIf="res.estado_nombre === 'En Tránsito'" class="btn-primary start-btn" (click)="cambiarEstadoReserva(res, 'Entregada')" style="padding: 6px 12px; font-size: 0.85rem;">
+            <span class="material-symbols-rounded" style="font-size: 1.2rem;">task_alt</span> Ya la entregué
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- Cierre de active-trip-view -->
+</div>

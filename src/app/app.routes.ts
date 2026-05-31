@@ -29,6 +29,9 @@ import { ViajesComponent } from './pages/viajes/viajes';
 import { MonitorFatigaComponent } from './pages/monitor-fatiga/monitor-fatiga'; 
 import { AdminFatigaComponent } from './pages/admin-fatiga/admin-fatiga';
 import { AlertasComponent } from './pages/alertas/alertas'; // <-- NUEVO MÓDULO DE ALERTAS
+import { PerfilConductor } from './pages/perfil-conductor/perfil-conductor';
+import { ViajeActivoConductorComponent } from './pages/viaje-activo-conductor/viaje-activo-conductor';
+import { DashboardConductor } from './pages/dashboard-conductor/dashboard-conductor';
 
 export const routes: Routes = [
   // 🚀 CAMBIO PRINCIPAL: La ruta vacía ahora muestra la Landing
@@ -58,6 +61,7 @@ export const routes: Routes = [
       { path: 'config-flota', component: ConfigFlotaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_vehiculos' } },
       { path: 'clientes', component: ClientesComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_clientes' } },
       { path: 'rutas', component: RutasComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
+      { path: 'perfil', component: PerfilConductor },
       
       // Reservas y Viajes tienen permisos híbridos (los clientes pueden ver su parte, los admins todo)
       // Por eso NO les ponemos un guard restrictivo a nivel de ruta para que el cliente pueda entrar,
@@ -65,9 +69,11 @@ export const routes: Routes = [
       { path: 'reservas', component: ReservasComponent },
       { path: 'viajes', component: ViajesComponent },
       
-      { path: 'monitor-fatiga', component: MonitorFatigaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } },
+      { path: 'monitor-fatiga', component: MonitorFatigaComponent },
       { path: 'admin-fatiga', component: AdminFatigaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } },
-      { path: 'alertas', component: AlertasComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } }
+      { path: 'alertas', component: AlertasComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } },
+      { path: 'dashboard-conductor', component: DashboardConductor },
+      { path: 'viaje-activo', component: ViajeActivoConductorComponent }
     ]
   },
   // Si alguien escribe una URL que no existe, lo mandamos al inicio (Landing)

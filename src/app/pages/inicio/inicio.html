@@ -6,7 +6,9 @@
 <!-- Contenido Principal -->
 <app-dashboard-cliente *ngIf="!cargando && esCliente"></app-dashboard-cliente>
 
-<div class="dashboard-overview fade-in" *ngIf="!cargando && !esCliente">
+<app-dashboard-conductor *ngIf="!cargando && esConductor"></app-dashboard-conductor>
+
+<div class="dashboard-overview fade-in" *ngIf="!cargando && !esCliente && !esConductor">
   
   <header class="dashboard-header">
     <h1>{{ saludo }}, Administrador</h1>
