@@ -515,10 +515,47 @@ alSeleccionarVehiculo() {
 
   // --- CRUD VIÁTICOS ---
 
+  cargandoRuta: boolean = false;
+
   abrirViaticos(v:any) { 
     this.viajeSeleccionado = v; 
-    this.nuevoViatico = {descripcion: '', monto_total: null, viaje: v.codigo_viaje, estado: 'Pendiente'}; 
     this.mostrarModalViaticos = true; 
+    this.cargandoRuta = true;
+    this.nuevoViatico = {descripcion: '', monto_total: null, viaje: v.codigo_viaje, estado: 'Pendiente'}; 
+
+    // Simulamos un pequeño tiempo de cálculo para la UX
+    setTimeout(() => {
+      if (v.fecha_salida && v.fecha_llegada_estimada) {
+        const fechaSalida = new Date(v.fecha_salida);
+        const fechaLlegada = new Date(v.fecha_llegada_estimada);
+        
+        // Calcular la diferencia en milisegundos y luego en días
+        const diffMilisegundos = fechaLlegada.getTime() - fechaSalida.getTime();
+        let diasViaje = Math.ceil(diffMilisegundos / (1000 * 60 * 60 * 24));
+        
+        // Mínimo 1 día de viáticos
+        if (diasViaje < 1) {
+          diasViaje = 1;
+        }
+
+        // TARIFA POR DÍA: Desayuno (50), Almuerzo (50), Cena (50) = 150 Bs por día
+        const tarifaPorDia = 150;
+        const montoCalculado = diasViaje * tarifaPorDia;
+        
+        this.nuevoViatico.descripcion = `Viáticos del Conductor (${diasViaje} días: Alimentación)`;
+        this.nuevoViatico.monto_total = montoCalculado;
+      } else {
+        // Fallback genérico si no hay fechas
+        this.nuevoViatico.descripcion = 'Viáticos del Conductor (1 día)';
+        this.nuevoViatico.monto_total = 150; 
+      }
+      this.cargandoRuta = false;
+    }, 600);
+  }
+
+  prellenar(texto: string) {
+    this.nuevoViatico.descripcion = texto;
+    this.nuevoViatico.monto_total = null;
   }
 
   guardarViatico() {
@@ -528,7 +565,7 @@ alSeleccionarVehiculo() {
     }
     this.viajeService.crearViatico(this.nuevoViatico).subscribe({
       next: () => {
-        this.mostrarMensaje('Viático guardado.', 'success');
+        this.mostrarMensaje('Viático guardado exitosamente.', 'success');
         this.mostrarModalViaticos = false;
         this.cargarViajes(); 
       },
@@ -545,6 +582,70 @@ alSeleccionarVehiculo() {
       },
       error: () => this.mostrarMensaje('Error al pagar viático.', 'error')
     });
+  }
+
+  async exportarViaticos(tipo: 'pdf' | 'excel'): Promise<void> {
+    if (!this.viajeSeleccionado || !this.viajeSeleccionado.viaticos || this.viajeSeleccionado.viaticos.length === 0) {
+      this.mostrarMensaje('No hay viáticos registrados para exportar.', 'error');
+      return;
+    }
+
+    const { value: nombreArchivo } = await Swal.fire({
+      title: `Exportar Viáticos a ${tipo.toUpperCase()}`,
+      input: 'text',
+      inputLabel: 'Nombre del archivo',
+      inputValue: `Comprobante_Viaticos_${this.viajeSeleccionado.codigo_viaje}`,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) return '¡Necesitas escribir un nombre!';
+        return null;
+      }
+    });
+
+    if (nombreArchivo) {
+      const columnas = [
+        { header: '#', key: 'nro' },
+        { header: 'Descripción', key: 'descripcion' },
+        { header: 'Monto (Bs)', key: 'monto_total' },
+        { header: 'Estado', key: 'estado' }
+      ];
+
+      const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
+
+      let totalViaticos = 0;
+      const datosProcesados = this.viajeSeleccionado.viaticos.map((v: any, index: number) => {
+        totalViaticos += Number(v.monto_total);
+        return {
+          nro: index + 1,
+          descripcion: v.descripcion,
+          monto_total: v.monto_total,
+          estado: v.estado
+        };
+      });
+
+      // Añadir fila de total
+      datosProcesados.push({
+        nro: '',
+        descripcion: 'TOTAL VIÁTICOS',
+        monto_total: totalViaticos,
+        estado: ''
+      });
+
+      const columnasExcel = tipo === 'excel' ? columnas.filter(c => c.key !== 'nro') : columnas;
+
+      if (tipo === 'excel') {
+        this.exportService.exportarExcel(datosProcesados, columnasExcel, nombreArchivo, autor);
+      } else {
+        this.exportService.exportarPDF(
+          datosProcesados, 
+          columnasExcel, 
+          `Comprobante de Viáticos - Viaje ${this.viajeSeleccionado.codigo_viaje}`, 
+          nombreArchivo, 
+          autor
+        );
+      }
+      this.mostrarMensaje(`Comprobante ${tipo.toUpperCase()} generado.`, 'success');
+    }
   }
 
   // Usamos un 'getter' para que el HTML lea el dato directamente del servicio (que nunca se apaga)

@@ -22,7 +22,11 @@
     
     <div class="crud-header">
       <h3 style="text-transform: capitalize;">Listado de {{ tabActiva }}</h3>
-      <button class="btn-action btn-add" (click)="abrirModal()">+ Agregar {{ tabActiva }}</button>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+        <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
+        <button class="btn-action btn-add" (click)="abrirModal()">+ Agregar {{ tabActiva }}</button>
+      </div>
     </div>
 
     <table class="crud-table">

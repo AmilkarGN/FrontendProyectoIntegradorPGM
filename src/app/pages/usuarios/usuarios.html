@@ -2,6 +2,8 @@
   <div class="crud-header">
     <h2>Gestión de Usuarios</h2>
     <div style="display: flex; gap: 15px; align-items: center;">
+      <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
       <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Usuario</button>
     </div>
   </div>

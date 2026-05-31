@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -17,7 +18,10 @@ export class AdminFatigaComponent implements OnInit {
   viendoDescartadas = false;
   terminoBusqueda = '';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private exportService: ExportService
+  ) {}
 
   ngOnInit() {
     this.cargarAlertas();
@@ -54,6 +58,35 @@ export class AdminFatigaComponent implements OnInit {
   toggleVista() {
     this.viendoDescartadas = !this.viendoDescartadas;
     this.cargarAlertas();
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    const estado = this.viendoDescartadas ? 'Historial de Fatiga (Descartadas)' : 'Historial de Fatiga (Activas)';
+    const columnas = [
+      { header: '#', key: 'nro' },
+      { header: 'ID Alerta', key: 'id' },
+      { header: 'Conductor', key: 'conductor' },
+      { header: 'Vehículo', key: 'vehiculo' },
+      { header: 'Nivel Fatiga', key: 'nivel' },
+      { header: 'Timestamp', key: 'fecha' }
+    ];
+    
+    const datosMapeados = this.filtrados.map((a, index) => ({
+      nro: index + 1,
+      id: a.id,
+      conductor: `${a.conductor_nombre} ${a.conductor_apellido}`,
+      vehiculo: a.vehiculo_placa || 'Desconocido',
+      nivel: a.nivel_severidad || a.nivel_fatiga || 'Desconocido',
+      fecha: a.fecha_hora || 'Sin registro'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Historial_Fatiga');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Historial_Fatiga');
+    }
   }
 
   eliminarAlerta(id: number) {

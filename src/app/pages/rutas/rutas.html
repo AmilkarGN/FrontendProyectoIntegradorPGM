@@ -111,6 +111,30 @@
               🛣️ {{ rutaVer.distancia_km }} km
             </div>
           </div>
+
+          <div class="card-detalle" style="margin-top: 15px; max-height: 250px; overflow-y: auto;">
+            <p class="card-subtitle">VIAJES ACTIVOS EN ESTA RUTA</p>
+            <div *ngIf="cargandoViajes" style="margin-top: 10px; color: #64748b; font-size: 0.9em;">
+              Buscando viajes...
+            </div>
+            <div *ngIf="!cargandoViajes && viajesRuta.length === 0" style="margin-top: 10px; color: #64748b; font-size: 0.9em;">
+              No hay viajes activos transitando por esta ruta.
+            </div>
+            <div *ngIf="!cargandoViajes && viajesRuta.length > 0" style="margin-top: 10px;">
+              <div *ngFor="let v of viajesRuta" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 8px; font-size: 0.85em;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong style="color: #0f172a;">{{ v.codigo_viaje }}</strong>
+                  <span class="badge" style="font-size: 0.7em; padding: 2px 6px;">{{ v.estado_nombre }}</span>
+                </div>
+                <div style="color: #475569;">
+                  🚚 Vehículo: {{ v.vehiculo_placa || 'N/A' }}
+                </div>
+                <div style="color: #475569;">
+                  👤 Conductor: {{ v.conductor_nombre || 'N/A' }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="col-mapa" style="min-height: 400px; display: flex; flex-direction: column;">

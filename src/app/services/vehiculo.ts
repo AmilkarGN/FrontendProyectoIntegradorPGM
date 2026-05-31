@@ -3,8 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 // --- INTERFACES ---
-export interface ModeloVehiculo { id: number; marca: string; nombre_modelo: string; anio: number; }
-export interface TipoVehiculo { id: number; nombre: string; capacidad_carga_kg: number; }
+export interface ModeloVehiculo { id?: number; marca: string; nombre_modelo: string; anio: number; }
+export interface TipoVehiculo { 
+  id?: number; 
+  nombre: string; 
+  capacidad_carga_kg: number; 
+  largo_m?: number; 
+  ancho_m?: number; 
+  alto_m?: number; 
+  categoria_licencia_requerida?: number;
+  categoria_licencia_detalles?: any;
+}
 
 export interface Vehiculo {
   placa: string; // ¡Esta es nuestra Primary Key!
@@ -21,16 +30,6 @@ export interface Vehiculo {
   foto?: string;
   fecha_eliminacion?: string;
   eliminado_por_nombre?: string;
-}
-
-export interface TipoVehiculo { 
-  id: number; 
-  nombre: string; 
-  capacidad_carga_kg: number; 
-  
-  // Agregamos estos dos campos:
-  categoria_licencia_requerida?: number; // El ID para enviar al formulario
-  categoria_licencia_detalles?: any;     // La info completa para leer el nombre
 }
 @Injectable({
   providedIn: 'root'

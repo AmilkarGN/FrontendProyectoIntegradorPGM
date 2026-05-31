@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { VehiculoService, ModeloVehiculo, TipoVehiculo } from '../../services/vehiculo';
 import { ConductorService, CategoriaLicencia } from '../../services/conductor';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -55,11 +56,74 @@ export class ConfigFlotaComponent implements OnInit {
   constructor(
     private vehiculoService: VehiculoService,
     private conductorService: ConductorService,
-    private http: HttpClient 
+    private http: HttpClient,
+    private exportService: ExportService
   ) {}
 
   ngOnInit(): void {
     this.cargarCatalogos();
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    let estado = '';
+    let columnas: any[] = [];
+    let datosMapeados: any[] = [];
+
+    if (this.tabActiva === 'modelos') {
+      estado = 'Modelos de Vehículos';
+      columnas = [
+        { header: '#', key: 'nro' },
+        { header: 'Marca', key: 'marca' },
+        { header: 'Modelo', key: 'nombre_modelo' },
+        { header: 'Año', key: 'anio' }
+      ];
+      datosMapeados = this.filtrados.map((m, index) => ({
+        nro: index + 1,
+        marca: m.marca || '',
+        nombre_modelo: m.nombre_modelo || '',
+        anio: m.anio || ''
+      }));
+    } else if (this.tabActiva === 'tipos') {
+      estado = 'Tipos de Vehículos y Capacidad';
+      columnas = [
+        { header: '#', key: 'nro' },
+        { header: 'Nombre', key: 'nombre' },
+        { header: 'Capacidad (Kg)', key: 'capacidad_carga_kg' },
+        { header: 'Largo (m)', key: 'largo_m' },
+        { header: 'Ancho (m)', key: 'ancho_m' },
+        { header: 'Alto (m)', key: 'alto_m' }
+      ];
+      datosMapeados = this.filtrados.map((t, index) => ({
+        nro: index + 1,
+        nombre: t.nombre || '',
+        capacidad_carga_kg: t.capacidad_carga_kg || 0,
+        largo_m: t.largo_m || 0,
+        ancho_m: t.ancho_m || 0,
+        alto_m: t.alto_m || 0
+      }));
+    } else if (this.tabActiva === 'licencias') {
+      estado = 'Categorías de Licencia Permitidas';
+      columnas = [
+        { header: '#', key: 'nro' },
+        { header: 'Categoría', key: 'nombre' },
+        { header: 'Maquinaria Pesada', key: 'permite_maquinaria_pesada' },
+        { header: 'Edad Mínima', key: 'edad_minima' }
+      ];
+      datosMapeados = this.filtrados.map((l, index) => ({
+        nro: index + 1,
+        nombre: l.nombre || '',
+        permite_maquinaria_pesada: l.permite_maquinaria_pesada ? 'Sí' : 'No',
+        edad_minima: l.edad_minima || 'Sin restricción'
+      }));
+    }
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Config_Flota');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Config_Flota');
+    }
   }
 
   // 👇 NUEVA FUNCIÓN PARA MENSAJES BONITOS

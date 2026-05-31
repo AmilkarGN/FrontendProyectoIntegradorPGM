@@ -24,13 +24,36 @@ export class AlertasService {
   
   private alertasSubject = new BehaviorSubject<AlertaItem[]>([]);
   public alertas$ = this.alertasSubject.asObservable();
+  
+  private alertasIgnoradas: Set<string> = new Set<string>();
 
   constructor(
     private vehiculoService: VehiculoService,
     private conductorService: ConductorService,
     private reservaService: ReservaService,
     private viajeService: ViajeService
-  ) { }
+  ) { 
+    // Recuperar alertas ignoradas de localStorage si existe
+    if (typeof window !== 'undefined') {
+      const ignoradas = localStorage.getItem('alertas_ignoradas');
+      if (ignoradas) {
+        this.alertasIgnoradas = new Set(JSON.parse(ignoradas));
+      }
+    }
+  }
+
+  public ignorarAlerta(id: string): void {
+    this.alertasIgnoradas.add(id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('alertas_ignoradas', JSON.stringify(Array.from(this.alertasIgnoradas)));
+    }
+    // Forzar re-emisión para que los componentes se actualicen (con la misma lista completa)
+    this.alertasSubject.next(this.alertasSubject.getValue());
+  }
+
+  public esIgnorada(id: string): boolean {
+    return this.alertasIgnoradas.has(id);
+  }
 
   // Llama a esto para recalcular las alertas (e.g., desde el Dashboard al iniciar, o con un botón de refresco)
   public calcularAlertasGlobales(): void {
@@ -90,6 +113,9 @@ export class AlertasService {
           // Si la fecha solicitada ya pasó o es hoy, y sigue pendiente...
           if (fRes.getTime() <= hoy.getTime()) {
             alertasNuevas.push({ id: 'r_'+r.codigo_reserva, tipo: 'reserva', prioridad: 'critica', titulo: `Reserva Retrasada (${r.codigo_reserva})`, mensaje: `Debía viajar el ${r.fecha_tentativa_viaje} pero sigue Pendiente.`, fechaRef: r.fecha_tentativa_viaje, enlace: '/dashboard/reservas', registroId: r.codigo_reserva! });
+          } else {
+            // Reserva en el futuro pero sin viaje asignado
+            alertasNuevas.push({ id: 'r_n_'+r.codigo_reserva, tipo: 'reserva', prioridad: 'preventiva', titulo: `Nueva Reserva (${r.codigo_reserva})`, mensaje: `Carga programada para el ${r.fecha_tentativa_viaje} espera asignación de camión.`, fechaRef: r.fecha_tentativa_viaje, enlace: '/dashboard/reservas', registroId: r.codigo_reserva! });
           }
         }
       });
@@ -109,6 +135,11 @@ export class AlertasService {
             alertasNuevas.push({ id: 'vi_l_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'critica', titulo: `Demora en Ruta (${v.codigo_viaje})`, mensaje: `Debió llegar a las ${fLleg.toLocaleString()}`, fechaRef: v.fecha_llegada_estimada, enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
           }
         }
+        
+        if (v.estado_nombre === 'Finalizado') {
+          // Alertar sobre un viaje recién finalizado que quizás necesite cierre contable
+          alertasNuevas.push({ id: 'vi_f_'+v.codigo_viaje, tipo: 'viaje', prioridad: 'preventiva', titulo: `Viaje Finalizado (${v.codigo_viaje})`, mensaje: `El viaje concluyó. Revisar viáticos y rendimiento.`, fechaRef: v.fecha_salida || 'Reciente', enlace: '/dashboard/viajes', registroId: v.codigo_viaje });
+        }
       });
 
       // Ordenar: Críticas primero, luego preventivas
@@ -118,6 +149,7 @@ export class AlertasService {
         return 0;
       });
 
+      // Emitimos todas las alertas sin filtrar, el filtrado lo hará la campanita
       this.alertasSubject.next(alertasNuevas);
     });
   }

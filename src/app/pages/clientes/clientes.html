@@ -1,7 +1,11 @@
 <div class="crud-container fade-in">
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>Cartera de Clientes</h2>
-    <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Cliente</button>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
+      <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Cliente</button>
+    </div>
   </div>
 
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->

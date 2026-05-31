@@ -10,14 +10,6 @@
       
       <p class="nav-section-title">Comando Logístico</p>
       
-      <!-- NUEVA CAMPANITA DE ALERTAS -->
-      <a routerLink="alertas" routerLinkActive="active" class="nav-item nav-item-alertas" title="Centro de Monitoreo">
-        <span class="material-symbols-rounded icon">notifications</span> 
-        <span class="nav-text" style="flex: 1;">Centro de Alertas</span>
-        <!-- Puntito rojo dinámico (Solo aparece si hay alertas) -->
-        <div class="alert-dot" *ngIf="alertasActivas > 0"></div>
-      </a>
-
       <a routerLink="inicio" routerLinkActive="active" class="nav-item">
         <span class="material-symbols-rounded icon">dashboard</span> <span class="nav-text">Vista General</span>
       </a>
@@ -97,7 +89,57 @@
     </div>
   </aside>
 
-  <main class="main-content">
+  <main class="main-content" (click)="cerrarNotificaciones()">
+    
+    <!-- CONTENEDOR CAMPANITA FLOTANTE -->
+    <div class="notification-wrapper floating-bell" (click)="$event.stopPropagation()">
+      <button class="btn-bell" (click)="alternarNotificaciones()" [class.active]="mostrarNotificaciones">
+        <span class="material-symbols-rounded">notifications</span>
+        <div class="bell-badge bounce-animation" *ngIf="alertasActivas > 0">{{ alertasActivas }}</div>
+      </button>
+
+      <!-- DROPDOWN DE NOTIFICACIONES -->
+      <div class="notification-dropdown" *ngIf="mostrarNotificaciones">
+        <div class="dropdown-header">
+          <h4>Notificaciones</h4>
+          <span class="badge-count">{{ alertasActivas }} Nuevas</span>
+        </div>
+        
+        <div class="dropdown-body">
+          <div class="empty-state" *ngIf="listaAlertas.length === 0">
+            <span class="material-symbols-rounded">notifications_paused</span>
+            <p>No tienes notificaciones pendientes</p>
+          </div>
+
+          <a *ngFor="let alerta of listaAlertas" 
+             [routerLink]="alerta.enlace" 
+             [queryParams]="{ alerta: alerta.registroId }"
+             class="notification-item" 
+             [ngClass]="alerta.prioridad"
+             (click)="cerrarNotificaciones()">
+            <div class="notif-icon">
+              <span class="material-symbols-rounded" *ngIf="alerta.prioridad === 'critica'">warning</span>
+              <span class="material-symbols-rounded" *ngIf="alerta.prioridad === 'preventiva'">info</span>
+            </div>
+            <div class="notif-content">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <strong>{{ alerta.titulo }}</strong>
+                <button class="btn-ignorar" (click)="ignorarAlerta($event, alerta.id)" title="Ignorar esta notificación">
+                  <span class="material-symbols-rounded" style="font-size: 1.1rem;">close</span>
+                </button>
+              </div>
+              <p>{{ alerta.mensaje }}</p>
+              <small>{{ alerta.fechaRef | date:'short' }}</small>
+            </div>
+          </a>
+        </div>
+        
+        <div class="dropdown-footer">
+          <a routerLink="alertas" (click)="cerrarNotificaciones()">Ver Centro de Alertas Completo</a>
+        </div>
+      </div>
+    </div>
+
     <div class="content-wrapper">
       <router-outlet></router-outlet>
     </div>

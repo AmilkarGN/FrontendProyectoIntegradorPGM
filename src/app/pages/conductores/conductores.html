@@ -3,6 +3,8 @@
     <h2>Gestión de Conductores (Flota)</h2>
     <div style="display: flex; gap: 10px;">
       <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="mostrarGuiaEstados = true" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
       <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Asignar Conductor</button>
     </div>
   </div>

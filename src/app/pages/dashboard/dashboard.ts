@@ -20,14 +20,32 @@ import Swal from 'sweetalert2';
 export class Dashboard {
   
   alertasActivas: number = 0;
+  listaAlertas: any[] = [];
+  mostrarNotificaciones: boolean = false;
 
   constructor(private authService: AuthService, private alertasService: AlertasService) {}
 
   ngOnInit() {
     this.alertasService.calcularAlertasGlobales();
     this.alertasService.alertas$.subscribe(alertas => {
-      this.alertasActivas = alertas.length;
+      // En la campanita filtramos las ignoradas
+      this.listaAlertas = alertas.filter(a => !this.alertasService.esIgnorada(a.id));
+      this.alertasActivas = this.listaAlertas.length;
     });
+  }
+
+  alternarNotificaciones() {
+    this.mostrarNotificaciones = !this.mostrarNotificaciones;
+  }
+
+  cerrarNotificaciones() {
+    this.mostrarNotificaciones = false;
+  }
+
+  ignorarAlerta(event: Event, id: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.alertasService.ignorarAlerta(id);
   }
 
   cerrarSesion() {

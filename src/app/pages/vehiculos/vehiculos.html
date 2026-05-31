@@ -3,6 +3,8 @@
     <h2>Registro de Vehículos (Flota)</h2>
     <div style="display: flex; gap: 10px;">
       <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="mostrarGuiaEstados = true" title="Manual de Estados">ℹ️ Guía de Estados</button>
+      <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
       <button class="btn-action btn-add" (click)="abrirModalCrear()">+ Nuevo Vehículo</button>
     </div>
   </div>
@@ -98,6 +100,8 @@
     <div class="crud-modal slide-in-bottom" style="max-width: 800px;">
       <h3>{{ modoModal === 'editar' ? 'Actualizar Vehículo' : 'Nuevo Registro de Flota' }}</h3>
       
+
+
       <form (ngSubmit)="vehForm.invalid ? vehForm.control.markAllAsTouched() : guardarVehiculo()" #vehForm="ngForm">
         
         <div class="form-grid">
@@ -128,6 +132,87 @@
               <option *ngFor="let t of tipos" [value]="t.id">{{ t.nombre }} ({{t.capacidad_carga_kg}} Kg)</option>
             </select>
                       <small *ngIf="vehForm.controls['tipo']?.invalid && vehForm.controls['tipo']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
+          </div>
+        </div>
+
+        <!-- IA: Botón y Formulario de Catálogo Inline -->
+        <div *ngIf="modoModal === 'crear'" style="margin-top: -10px; margin-bottom: 20px; padding: 0 10px;">
+          <a *ngIf="!mostrarFormularioIA" href="javascript:void(0)" (click)="abrirAsistenteIA()" style="color: #3b82f6; font-size: 0.85rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+            <span class="material-symbols-rounded" style="font-size: 1.1rem;">auto_awesome</span> ¿No encuentras el modelo? Créalo con IA
+          </a>
+
+          <div *ngIf="mostrarFormularioIA" class="ai-consultation-box slide-in-bottom" style="background: linear-gradient(145deg, #f8fafc, #f1f5f9); border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="margin: 0; color: #1e293b; display: flex; align-items: center; gap: 8px; font-size: 1rem;">
+                <span style="font-size: 1.2rem;">✨</span> Asistente de Catálogo IA
+              </h4>
+              <button type="button" class="btn-icon" (click)="cerrarAsistenteIA()" style="color: #94a3b8; background: transparent; border: none; cursor: pointer;">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Busca el camión y generaremos los datos para registrar su Marca, Modelo y Tipo en la base de datos automáticamente.</p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+              <input type="text" [ngModelOptions]="{standalone: true}" [(ngModel)]="busquedaIA" placeholder="Ej: Volvo FH 540, Scania R450..." class="input-claro" style="flex: 1;" (keyup.enter)="consultarIA()" [disabled]="cargandoIA">
+              <button type="button" class="btn-action" style="background: #8b5cf6; color: white; border: none; padding: 0 20px; font-weight: 600; min-width: 140px; display: flex; align-items: center; justify-content: center; gap: 5px;" (click)="consultarIA()" [disabled]="cargandoIA || !busquedaIA">
+                <span *ngIf="!cargandoIA">Consultar IA</span>
+                <span *ngIf="cargandoIA">Procesando</span>
+                <span *ngIf="cargandoIA" class="material-symbols-rounded" style="animation: spin 1s linear infinite; font-size: 1.1rem;">sync</span>
+              </button>
+            </div>
+            <p *ngIf="cargandoIA" style="color: #8b5cf6; font-size: 0.8rem; font-weight: 600; margin-top: 0; margin-bottom: 15px; animation: pulse 2s infinite;">
+              La IA está buscando y analizando los datos técnicos. Por favor espere...
+            </p>
+            <div *ngIf="!cargandoIA" style="margin-bottom: 15px;"></div>
+
+            <!-- Mini Formulario Editable IA -->
+            <div *ngIf="resultadoIA" style="background: white; border-radius: 8px; padding: 15px; border-left: 4px solid #8b5cf6; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+              <h5 style="margin: 0 0 15px 0; color: #0f172a; font-size: 0.9rem;">Valida los datos antes de crear el catálogo:</h5>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <!-- Fila 1 -->
+                <div>
+                  <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Marca</label>
+                  <input type="text" [ngModelOptions]="{standalone: true}" [(ngModel)]="resultadoIA.marca" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Modelo</label>
+                  <input type="text" [ngModelOptions]="{standalone: true}" [(ngModel)]="resultadoIA.nombre_modelo" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Año Est.</label>
+                  <input type="number" [ngModelOptions]="{standalone: true}" [(ngModel)]="resultadoIA.anio" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+                
+                <!-- Fila 2 -->
+                <div>
+                  <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Tipo Vehículo</label>
+                  <input type="text" [ngModelOptions]="{standalone: true}" [(ngModel)]="resultadoIA.nombre_tipo" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <label style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin: 0;">Carga</label>
+                    <div (click)="toggleUnidadCargaIA()" style="cursor: pointer; display: flex; align-items: center; background: #e2e8f0; border-radius: 12px; padding: 2px; user-select: none;">
+                      <div [ngStyle]="{'background': unidadCargaIA === 'kg' ? '#8b5cf6' : 'transparent', 'color': unidadCargaIA === 'kg' ? 'white' : '#64748b'}" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; font-weight: 600; transition: all 0.2s;">Kg</div>
+                      <div [ngStyle]="{'background': unidadCargaIA === 'qq' ? '#8b5cf6' : 'transparent', 'color': unidadCargaIA === 'qq' ? 'white' : '#64748b'}" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; font-weight: 600; transition: all 0.2s;">QQ</div>
+                    </div>
+                  </div>
+                  <input type="number" [ngModelOptions]="{standalone: true}" [(ngModel)]="cargaMostrar" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Largo (m)</label>
+                  <input type="number" [ngModelOptions]="{standalone: true}" [(ngModel)]="resultadoIA.largo_m" class="input-claro" style="padding: 6px; font-size: 0.85rem; width: 100%;">
+                </div>
+              </div>
+              
+              <div style="display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-action" style="background: #10b981; color: white; border: none; padding: 8px 15px; font-weight: 600; font-size: 0.85rem;" (click)="guardarCatalogoIA()" [disabled]="guardandoCatalogoIA">
+                  <span *ngIf="!guardandoCatalogoIA">➕ Guardar Catálogo y Usar</span>
+                  <span *ngIf="guardandoCatalogoIA">Guardando...</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

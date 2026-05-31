@@ -69,7 +69,7 @@
               </button>
               
               <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️ Ver</button>
-              <button class="btn-icon btn-dinero" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Gastos</button>
+              <button class="btn-icon btn-dinero" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Viáticos</button>
               <button class="btn-icon btn-editar" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
               <button class="btn-icon btn-eliminar" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
             </div>
@@ -243,9 +243,15 @@
 
   <div class="crud-modal-overlay" *ngIf="mostrarModalViaticos">
     <div class="crud-modal slide-in-bottom modal-md">
-      <div class="modal-header flex-between">
-        <h3>💵 Viáticos: <span class="text-primary">{{ viajeSeleccionado?.codigo_viaje }}</span></h3>
-        <span class="badge badge-unidad">Piloto: {{ viajeSeleccionado?.conductor_nombre }}</span>
+      <div class="modal-header flex-between" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <h3 style="margin: 0;">💵 Viáticos: <span class="text-primary">{{ viajeSeleccionado?.codigo_viaje }}</span></h3>
+          <span class="badge badge-unidad">Piloto: {{ viajeSeleccionado?.conductor_nombre }}</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 6px 12px; font-size: 0.85rem;" (click)="exportarViaticos('pdf')">📄 PDF</button>
+          <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 6px 12px; font-size: 0.85rem;" (click)="exportarViaticos('excel')">📊 Excel</button>
+        </div>
       </div>
 
       <div class="historial-viaticos">
@@ -266,12 +272,30 @@
       </div>
 
       <form (ngSubmit)="viaticoForm.invalid ? viaticoForm.control.markAllAsTouched() : guardarViatico()" class="form-nuevo-viatico" #viaticoForm="ngForm">
-        <h4>➕ Añadir Nuevo Gasto</h4>
-        <div class="flex-inputs">
-          <input type="text" name="desc" [(ngModel)]="nuevoViatico.descripcion" placeholder="Ej: Peajes" required pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\.,]+" class="input-claro flex-2">
-          <input type="number" name="monto" [(ngModel)]="nuevoViatico.monto_total" placeholder="Monto" required min="1" class="input-claro flex-1">
-          <button type="submit" class="btn-add-viatico" [disabled]="!nuevoViatico.descripcion || !nuevoViatico.monto_total || nuevoViatico.monto_total < 1">Añadir</button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h4>➕ Añadir Nuevo Viático</h4>
+          <span *ngIf="cargandoRuta" style="color: #3b82f6; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+            <span class="material-symbols-rounded" style="font-size: 1rem; animation: spin 1s linear infinite;">sync</span> Calculando...
+          </span>
         </div>
+        
+        <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+          <button type="button" class="btn-action" style="font-size: 0.75rem; padding: 4px 8px; background: #f1f5f9; color: #475569;" (click)="prellenar('Gasto Alimenticio')">🍔 Alimentación</button>
+          <button type="button" class="btn-action" style="font-size: 0.75rem; padding: 4px 8px; background: #f1f5f9; color: #475569;" (click)="prellenar('Peajes Ruta')">🛣️ Peaje</button>
+          <button type="button" class="btn-action" style="font-size: 0.75rem; padding: 4px 8px; background: #f1f5f9; color: #475569;" (click)="prellenar('Imprevistos / Mantenimiento Rápido')">🔧 Imprevistos</button>
+        </div>
+
+        <div class="flex-inputs">
+          <input type="text" name="desc" [(ngModel)]="nuevoViatico.descripcion" placeholder="Ej: Peajes, Viáticos de ruta" required pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\.,/()\-]+" class="input-claro flex-2" [disabled]="cargandoRuta">
+          
+          <div class="input-currency-wrapper flex-1">
+            <input type="number" name="monto" [(ngModel)]="nuevoViatico.monto_total" placeholder="Monto" required min="1" class="input-claro w-100" [disabled]="cargandoRuta" style="padding-right: 35px;">
+            <span class="currency-symbol">Bs</span>
+          </div>
+          
+          <button type="submit" class="btn-add-viatico" [disabled]="!nuevoViatico.descripcion || !nuevoViatico.monto_total || nuevoViatico.monto_total < 1 || cargandoRuta">Añadir</button>
+        </div>
+        <small *ngIf="!cargandoRuta" style="color: #64748b; margin-top: 5px; display: block;">* El cálculo sugerido inicial es por Alimentación (150 Bs / Día).</small>
       </form>
 
       <div class="modal-actions text-center">

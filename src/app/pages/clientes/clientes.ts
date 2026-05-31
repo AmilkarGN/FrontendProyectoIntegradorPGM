@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ClienteService, Cliente } from '../../services/cliente';
 import { UsuarioService, Usuario } from '../../services/usuario';
 import { HttpClient } from '@angular/common/http';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
@@ -32,7 +33,8 @@ export class ClientesComponent implements OnInit {
   constructor(
     private clienteService: ClienteService,
     private usuarioService: UsuarioService,
-    private http: HttpClient
+    private http: HttpClient,
+    private exportService: ExportService
   ) {}
 
   ngOnInit(): void {
@@ -94,6 +96,39 @@ export class ClientesComponent implements OnInit {
 
   get filtrados(): Cliente[] {
     return this.clientes.filter(c => evaluarFiltrosDinámicos(c, this.reglasActivas));
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    const estado = 'Catálogo de Clientes';
+    const columnas = [
+      { header: '#', key: 'nro' },
+      { header: 'Razón Social', key: 'razon_social' },
+      { header: 'NIT/Documento', key: 'nit' },
+      { header: 'Tipo', key: 'tipo_cliente' },
+      { header: 'Contacto Físico', key: 'contacto_principal' },
+      { header: 'Teléfono', key: 'telefono_principal' },
+      { header: 'Usuario Enlazado', key: 'usuario_nombre' }
+    ];
+    
+    const datosMapeados = this.filtrados.map((c, index) => ({
+      nro: index + 1,
+      razon_social: c.razon_social || 'No registrado',
+      nit: c.nit || 'No registrado',
+      tipo_cliente: c.tipo_cliente || 'No registrado',
+      contacto_principal: c.contacto_principal || 'No registrado',
+      telefono_principal: c.telefono_principal || 'No registrado',
+      usuario_nombre: c.usuario_detalles?.nombre 
+                        ? `${c.usuario_detalles.nombre} ${c.usuario_detalles.apellido_paterno}` 
+                        : 'No enlazado'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Clientes');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Clientes');
+    }
   }
 
   abrirModalCrear(): void {

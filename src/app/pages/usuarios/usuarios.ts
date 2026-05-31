@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService, Usuario } from '../../services/usuario';
 import { RolService, Rol } from '../../services/rol';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
@@ -30,7 +31,11 @@ export class UsuariosComponent implements OnInit {
 
   archivoFoto: File | null = null; // <-- Aquí guardaremos la imagen seleccionada
 
-  constructor(private usuarioService: UsuarioService, private rolService: RolService) {}
+  constructor(
+    private usuarioService: UsuarioService, 
+    private rolService: RolService,
+    private exportService: ExportService
+  ) {}
 
   obtenerImagenUrl(url: string | undefined): string {
     if (!url) return 'assets/images/icono.png';
@@ -77,6 +82,35 @@ export class UsuariosComponent implements OnInit {
 
   get filtrados(): Usuario[] {
     return this.usuarios.filter(u => evaluarFiltrosDinámicos(u, this.reglasActivas));
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    const estado = this.viendoPapelera ? 'Usuarios en Papelera' : 'Usuarios del Sistema';
+    const columnas = [
+      { header: '#', key: 'nro' },
+      { header: 'Username', key: 'username' },
+      { header: 'Nombre Completo', key: 'nombre_completo' },
+      { header: 'Cédula (CI)', key: 'ci' },
+      { header: 'Rol', key: 'rol' },
+      { header: 'Estado', key: 'activo' }
+    ];
+    
+    const datosMapeados = this.filtrados.map((u, index) => ({
+      nro: index + 1,
+      username: u.username || 'Desconocido',
+      nombre_completo: `${u.nombre || ''} ${u.apellido_paterno || ''} ${u.apellido_materno || ''}`.trim() || 'Sin nombre',
+      ci: u.ci || 'No registrado',
+      rol: u.rol_detalles?.nombre_rol || 'Sin Rol',
+      activo: u.is_active ? 'Cuenta Activa' : 'Cuenta Inactiva'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Usuarios_Sistema');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Usuarios_Sistema');
+    }
   }
 
   alternarPapelera(estado: boolean) {

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RutaService, Ruta } from '../../services/ruta';
 import { CiudadService, Ciudad } from '../../services/ciudad';
 import { ExportService } from '../../services/export.service';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
@@ -24,12 +25,15 @@ export class RutasComponent implements OnInit {
   mostrarModalMapa = false;
   rutaActual: any = {};
   rutaVer: any = {};
+  viajesRuta: any[] = [];
+  cargandoViajes = false;
 
 
   constructor(
     private rutaService: RutaService,
     private ciudadService: CiudadService,
     private exportService: ExportService,
+    private http: HttpClient,
     private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
@@ -78,6 +82,7 @@ export class RutasComponent implements OnInit {
 
     if (nombreArchivo) {
       const columnas = [
+        { header: '#', key: 'nro' },
         { header: 'ID Ruta', key: 'id' },
         { header: 'Nombre / Corredor', key: 'nombre_ruta' },
         { header: 'Origen', key: 'ciudad_origen_nombre' },
@@ -87,10 +92,21 @@ export class RutasComponent implements OnInit {
 
       const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
 
+      const datosMapeados = this.filtrados.map((r, index) => ({
+        nro: index + 1,
+        id: r.id,
+        nombre_ruta: r.nombre_ruta || 'No registrado',
+        ciudad_origen_nombre: r.ciudad_origen_nombre || 'Desconocida',
+        ciudad_destino_nombre: r.ciudad_destino_nombre || 'Desconocida',
+        distancia_km: r.distancia_km ? `${r.distancia_km} Km` : 'Desconocida'
+      }));
+
+      const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
       if (tipo === 'excel') {
-        this.exportService.exportarExcel(this.filtrados, columnas, nombreArchivo, autor);
+        this.exportService.exportarExcel(datosMapeados, columnasExcel, nombreArchivo, autor);
       } else {
-        this.exportService.exportarPDF(this.filtrados, columnas, 'Reporte de Rutas y Corredores Viales', nombreArchivo, autor);
+        this.exportService.exportarPDF(datosMapeados, columnas, 'Reporte de Rutas y Corredores Viales', nombreArchivo, autor);
       }
       Swal.fire('¡Éxito!', `Reporte ${tipo.toUpperCase()} generado.`, 'success');
     }
@@ -114,9 +130,24 @@ export class RutasComponent implements OnInit {
   verRuta(ruta: any): void {
     this.rutaVer = ruta;
     this.mostrarModalMapa = true;
+    this.cargarViajes(ruta.id);
     setTimeout(() => {
       this.iniciarMapaRuta(ruta);
     }, 500);
+  }
+
+  cargarViajes(rutaId: number): void {
+    this.cargandoViajes = true;
+    this.viajesRuta = [];
+    this.http.get<any[]>('http://localhost:8000/api/viajes/').subscribe({
+      next: (viajes) => {
+        this.viajesRuta = viajes.filter(v => v.ruta === rutaId && v.estado_nombre !== 'Finalizado' && v.estado_nombre !== 'Cancelado');
+        this.cargandoViajes = false;
+      },
+      error: () => {
+        this.cargandoViajes = false;
+      }
+    });
   }
 
   iniciarMapaRuta(ruta: any): void {

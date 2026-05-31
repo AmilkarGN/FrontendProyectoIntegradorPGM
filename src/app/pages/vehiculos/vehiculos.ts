@@ -8,6 +8,7 @@ import {
 } from '../../services/vehiculo';
 import { ViajeService } from '../../services/viaje';
 import { HttpClient } from '@angular/common/http';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
@@ -50,7 +51,8 @@ export class VehiculosComponent implements OnInit {
     private vehiculoService: VehiculoService,
     private viajeService: ViajeService,
     private http: HttpClient,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private exportService: ExportService
   ) {}
 
   abrirGuiaEstados() {
@@ -247,10 +249,171 @@ export class VehiculosComponent implements OnInit {
     this.mostrarModal = true;
   }
 
+  // --- LÓGICA DE INTELIGENCIA ARTIFICIAL ---
+  mostrarFormularioIA: boolean = false;
+  busquedaIA: string = '';
+  cargandoIA: boolean = false;
+  resultadoIA: any = null;
+  guardandoCatalogoIA: boolean = false;
+
+  abrirAsistenteIA(): void {
+    this.mostrarFormularioIA = true;
+  }
+
+  cerrarAsistenteIA(): void {
+    this.mostrarFormularioIA = false;
+    this.resultadoIA = null;
+    this.busquedaIA = '';
+  }
+
+  consultarIA(): void {
+    if (!this.busquedaIA) return;
+    this.cargandoIA = true;
+    this.resultadoIA = null;
+
+    this.http.post('http://localhost:8000/api/vehiculos/autocompletar-ia/', { query: this.busquedaIA })
+      .subscribe({
+        next: (res: any) => {
+          this.resultadoIA = res;
+          this.cargandoIA = false;
+          Swal.fire({
+            title: '✨ ¡Análisis Completado!',
+            text: 'Revisa los datos generados y guárdalos en el catálogo si son correctos.',
+            icon: 'success',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2500
+          });
+        },
+        error: (err) => {
+          console.error('Error IA:', err);
+          this.cargandoIA = false;
+          
+          if (err.status === 400 && err.error?.error) {
+            Swal.fire({
+              title: 'Consulta Inválida',
+              text: err.error.error,
+              icon: 'warning',
+              confirmButtonColor: '#f59e0b'
+            });
+          } else {
+            Swal.fire('Error', 'La IA no pudo procesar la solicitud. Verifica tu conexión o intenta de nuevo.', 'error');
+          }
+        }
+      });
+  }
+
+  unidadCargaIA: 'kg' | 'qq' = 'kg';
+
+  toggleUnidadCargaIA(): void {
+    this.unidadCargaIA = this.unidadCargaIA === 'kg' ? 'qq' : 'kg';
+  }
+
+  get cargaMostrar(): number {
+    if (!this.resultadoIA) return 0;
+    return this.unidadCargaIA === 'kg' 
+      ? this.resultadoIA.capacidad_carga_kg 
+      : parseFloat((this.resultadoIA.capacidad_carga_kg / 46).toFixed(2));
+  }
+
+  set cargaMostrar(valor: number) {
+    if (!this.resultadoIA) return;
+    if (this.unidadCargaIA === 'kg') {
+      this.resultadoIA.capacidad_carga_kg = valor;
+    } else {
+      this.resultadoIA.capacidad_carga_kg = valor * 46;
+    }
+  }
+
+  guardarCatalogoIA(): void {
+    if (!this.resultadoIA) return;
+    this.guardandoCatalogoIA = true;
+
+    // Construir objetos para el backend
+    const nuevoModelo: ModeloVehiculo = {
+      marca: this.resultadoIA.marca,
+      nombre_modelo: this.resultadoIA.nombre_modelo,
+      anio: this.resultadoIA.anio || new Date().getFullYear()
+    };
+
+    const nuevoTipo: TipoVehiculo = {
+      nombre: this.resultadoIA.nombre_tipo,
+      capacidad_carga_kg: this.resultadoIA.capacidad_carga_kg,
+      largo_m: this.resultadoIA.largo_m,
+      ancho_m: this.resultadoIA.ancho_m,
+      alto_m: this.resultadoIA.alto_m
+    };
+
+    import('rxjs').then(({ forkJoin }) => {
+      forkJoin({
+        modelo: this.vehiculoService.crearModelo(nuevoModelo),
+        tipo: this.vehiculoService.crearTipo(nuevoTipo)
+      }).subscribe({
+        next: (res: any) => {
+          this.modelos.push(res.modelo);
+          this.tipos.push(res.tipo);
+          
+          this.vehiculoActual.modelo = res.modelo.id;
+          this.vehiculoActual.tipo = res.tipo.id;
+
+          this.guardandoCatalogoIA = false;
+          this.cerrarAsistenteIA();
+          
+          Swal.fire({
+            title: '¡Catálogo Creado!',
+            text: `Se agregó y seleccionó automáticamente el nuevo modelo y tipo.`,
+            icon: 'success',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        },
+        error: (err) => {
+          console.error(err);
+          this.guardandoCatalogoIA = false;
+          Swal.fire('Error', 'Hubo un problema guardando el catálogo en la BD. Intenta manualmente.', 'error');
+        }
+      });
+    });
+  }
+
   verVehiculo(vehiculo: Vehiculo): void {
     this.modoModal = 'ver';
     this.vehiculoActual = { ...vehiculo };
     this.mostrarModal = true;
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    const estado = this.viendoPapelera ? 'Vehículos Eliminados' : 'Catálogo de Vehículos';
+    const columnas = [
+      { header: '#', key: 'nro' },
+      { header: 'Placa', key: 'placa' },
+      { header: 'Marca', key: 'marca' },
+      { header: 'Modelo', key: 'modelo' },
+      { header: 'Tipo', key: 'tipo' },
+      { header: 'Estado', key: 'estado' },
+      { header: 'Venc. SOAT', key: 'vencimiento_soat' }
+    ];
+    
+    const datosMapeados = this.filtrados.map((v, index) => ({
+      nro: index + 1,
+      placa: v.placa,
+      marca: v.modelo_detalles?.marca || 'Sin marca',
+      modelo: v.modelo_detalles?.nombre_modelo || 'Sin modelo',
+      tipo: v.tipo_detalles?.nombre || 'Sin tipo',
+      estado: v.estado || 'Desconocido',
+      vencimiento_soat: v.vencimiento_soat || 'No registrado'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+    
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Vehículos');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Vehículos');
+    }
   }
 
   cerrarModal(): void { this.mostrarModal = false; }

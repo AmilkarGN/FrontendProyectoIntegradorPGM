@@ -50,59 +50,62 @@
   <div class="crud-header" style="border-bottom: none; padding-bottom: 0;">
     <h2>{{ viendoHistorial ? 'Historial de Asignaciones' : 'Asignaciones Activas (Unidades en Operación)' }}</h2>
     <div style="display: flex; gap: 10px;">
-      <button class="btn-action" style="background: #475569;" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
-      <button class="btn-action" style="background: #059669;" (click)="exportarListado('excel')">📊 Exportar Excel</button>
-      <button class="btn-action" [style.background]="viendoHistorial ? '#eab308' : '#4f46e5'" (click)="toggleHistorial()">
+      <button *ngIf="!viendoHistorial" class="btn-action btn-add" (click)="abrirModalCrear()">🔗 Nueva Vinculación</button>
+      <button class="btn-action btn-pdf" (click)="exportarListado('pdf')">📄 Exportar PDF</button>
+      <button class="btn-action btn-excel" (click)="exportarListado('excel')">📊 Exportar Excel</button>
+      <button class="btn-action" [ngClass]="viendoHistorial ? 'btn-historial-active' : 'btn-historial'" (click)="toggleHistorial()">
         {{ viendoHistorial ? '🔙 Ver Activas' : '🕰️ Ver Historial' }}
       </button>
     </div>
   </div>
 
-  <div class="crud-content" [style.grid-template-columns]="viendoHistorial ? '1fr' : '350px 1fr'" style="display: grid; gap: 20px; align-items: start; margin-top: 15px;">
+  <div class="crud-content" style="margin-top: 15px;">
     
-    <!-- PANEL IZQUIERDO: NUEVA VINCULACIÓN (Solo se muestra si no estamos en historial) -->
-    <div class="crud-modal" style="position: static; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 20px; border: 1px solid #e2e8f0; height: fit-content;" *ngIf="!viendoHistorial">
-      <h3 style="margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">🔗 Crear Nueva Vinculación</h3>
-      
-      <div class="form-group" style="margin-top: 15px;">
-        <label>1. Seleccionar Conductor Disponible</label>
-        <select class="form-control" [(ngModel)]="nuevaAsignacion.conductor">
-          <option value="">-- Elija un conductor libre --</option>
-          <option *ngFor="let c of conductoresDisponibles" [value]="c.id">
-            {{ c.usuario_detalles?.nombre }} {{ c.usuario_detalles?.apellido_paterno }}
-          </option>
-        </select>
-        <small *ngIf="conductoresDisponibles.length === 0" style="color: #ef4444;">No hay conductores disponibles (en espera o de vacaciones).</small>
-      </div>
+    <!-- MODAL: NUEVA VINCULACIÓN -->
+    <div class="crud-modal-overlay" *ngIf="mostrarModalCrear">
+      <div class="crud-modal slide-in-bottom modal-md">
+        <div class="modal-header">
+          <h3>Crear Nueva Vinculación</h3>
+        </div>
+        
+        <div class="form-group" style="margin-top: 15px;">
+          <label>1. Seleccionar Conductor Disponible</label>
+          <select class="form-control input-claro" [(ngModel)]="nuevaAsignacion.conductor">
+            <option value="">-- Elija un conductor libre --</option>
+            <option *ngFor="let c of conductoresDisponibles" [value]="c.id">
+              {{ c.usuario_detalles?.nombre }} {{ c.usuario_detalles?.apellido_paterno }}
+            </option>
+          </select>
+          <small *ngIf="conductoresDisponibles.length === 0" style="color: #ef4444;">No hay conductores disponibles (en espera o de vacaciones).</small>
+        </div>
 
-      <div class="form-group">
-        <label>2. Seleccionar Vehículo (Solo Disponibles)</label>
-        <select class="form-control" [(ngModel)]="nuevaAsignacion.vehiculo">
-          <option value="">-- Elija un vehículo en base --</option>
-          <option *ngFor="let v of vehiculosDisponibles" [value]="v.placa">
-            {{ v.placa }} - {{ v.tipo_detalles?.nombre }}
-          </option>
-        </select>
-        <small *ngIf="vehiculosDisponibles.length === 0" style="color: #ef4444;">No hay vehículos libres (todos en ruta o taller).</small>
-      </div>
+        <div class="form-group">
+          <label>2. Seleccionar Vehículo (Solo Disponibles)</label>
+          <select class="form-control input-claro" [(ngModel)]="nuevaAsignacion.vehiculo">
+            <option value="">-- Elija un vehículo en base --</option>
+            <option *ngFor="let v of vehiculosDisponibles" [value]="v.placa">
+              {{ v.placa }} - {{ v.tipo_detalles?.nombre }}
+            </option>
+          </select>
+          <small *ngIf="vehiculosDisponibles.length === 0" style="color: #ef4444;">No hay vehículos libres (todos en ruta o taller).</small>
+        </div>
 
-      <div class="form-group">
-        <label>Notas / Observaciones Iniciales</label>
-        <textarea class="form-control" [(ngModel)]="nuevaAsignacion.observaciones" rows="3" placeholder="Ej: Camión entregado con tanque lleno..."></textarea>
-      </div>
+        <div class="form-group">
+          <label>Notas / Observaciones Iniciales</label>
+          <textarea class="form-control input-claro" [(ngModel)]="nuevaAsignacion.observaciones" rows="3" placeholder="Ej: Camión entregado con tanque lleno..."></textarea>
+        </div>
 
-      <button class="btn-action btn-add" style="width: 100%; margin-top: 10px; justify-content: center;" (click)="asignarVehiculo()" [disabled]="!nuevaAsignacion.conductor || !nuevaAsignacion.vehiculo">
-        Vincular Unidad
-      </button>
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="mostrarModalCrear = false">Cancelar</button>
+          <button class="btn-save" (click)="asignarVehiculo()" [disabled]="!nuevaAsignacion.conductor || !nuevaAsignacion.vehiculo">
+            Vincular Unidad
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- PANEL DERECHO: LISTA DE UNIDADES (O HISTORIAL) -->
+    <!-- LISTA DE UNIDADES (O HISTORIAL) -->
     <div style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0;">
-      
-      <div class="search-bar" style="margin-bottom: 15px;">
-        <span class="material-symbols-rounded search-icon">search</span>
-        <input type="text" placeholder="Buscar por conductor o placa..." [(ngModel)]="terminoBusqueda" class="search-input">
-      </div>
 
       <table class="crud-table">
         <thead>
@@ -137,23 +140,21 @@
               </span>
             </td>
             <td *ngIf="!viendoHistorial">
-              <select 
-                class="status-select" 
+              <span class="badge" 
                 [ngClass]="{
                   'status-disponible': getEstadoVehiculo(a.vehiculo) === 'Disponible',
                   'status-ruta': getEstadoVehiculo(a.vehiculo) === 'En Ruta' || getEstadoVehiculo(a.vehiculo) === 'En Viaje',
-                  'status-taller': getEstadoVehiculo(a.vehiculo) === 'En Taller' || getEstadoVehiculo(a.vehiculo) === 'Taller'
+                  'status-taller': getEstadoVehiculo(a.vehiculo) === 'En Taller' || getEstadoVehiculo(a.vehiculo) === 'Taller' || getEstadoVehiculo(a.vehiculo) === 'Averiado en viaje' || getEstadoVehiculo(a.vehiculo) === 'Vehículo averiado'
                 }"
-                [ngModel]="getEstadoVehiculo(a.vehiculo)" 
-                (change)="cambiarEstadoVehiculo(a, $event)"
-                title="Cambiar estado del vehículo físicamente">
-                <option *ngFor="let e of estadosVehiculo" [value]="e">{{ e }}</option>
-              </select>
+                style="padding: 6px 15px; border-radius: 20px; font-weight: 700; display: inline-block; background-image: none !important;">
+                {{ getEstadoVehiculo(a.vehiculo) }}
+              </span>
             </td>
             <td class="actions-column">
-              <button type="button" class="btn-cancel" (click)="desvincular(a.id)" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">
-                Liberar
-              </button>
+              <div class="acciones-flex" style="gap: 8px;">
+                <button type="button" class="btn-action" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 6px 12px; font-size: 0.85rem;" (click)="abrirDetalles(a)" title="Ver Detalles">Ver</button>
+                <button type="button" class="btn-action" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 12px; font-size: 0.85rem;" (click)="desvincular(a.id)" title="Desvincular Recursos">Liberar</button>
+              </div>
             </td>
           </tr>
           <tr *ngIf="asignacionesActivas.length === 0">
@@ -165,6 +166,50 @@
       </table>
     </div>
     
+  </div>
+
+  <!-- MODAL: VER DETALLES -->
+  <div class="crud-modal-overlay" *ngIf="mostrarModalDetalles">
+    <div class="crud-modal slide-in-bottom modal-md">
+      <div class="modal-header">
+        <h3>Detalles de la Asignación</h3>
+      </div>
+      <div class="modal-body" style="padding: 20px 0; display: flex; flex-direction: column; gap: 15px;">
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; gap: 15px; align-items: flex-start;">
+          <img *ngIf="asignacionSeleccionada?.conductor_foto" [src]="'http://localhost:8000' + asignacionSeleccionada.conductor_foto" alt="Foto Conductor" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid #cbd5e1;">
+          <div *ngIf="!asignacionSeleccionada?.conductor_foto" style="width: 70px; height: 70px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #64748b; font-weight: bold;">Sin Foto</div>
+          <div>
+            <h4 style="margin: 0 0 5px 0; color: #334155;">Conductor</h4>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Nombre:</strong> {{ asignacionSeleccionada?.conductor_nombre }}</p>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Edad:</strong> {{ asignacionSeleccionada?.conductor_edad ? asignacionSeleccionada.conductor_edad + ' años' : 'No registrada' }}</p>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Licencia:</strong> {{ asignacionSeleccionada?.conductor_licencia }}</p>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Categoría:</strong> {{ asignacionSeleccionada?.conductor_licencia_categoria }}</p>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; gap: 15px; align-items: flex-start;">
+          <img *ngIf="asignacionSeleccionada?.vehiculo_foto" [src]="'http://localhost:8000' + asignacionSeleccionada.vehiculo_foto" alt="Foto Vehículo" style="width: 90px; height: 70px; border-radius: 8px; object-fit: cover; border: 1px solid #cbd5e1;">
+          <div *ngIf="!asignacionSeleccionada?.vehiculo_foto" style="width: 90px; height: 70px; border-radius: 8px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #64748b; font-weight: bold;">Sin Foto</div>
+          <div>
+            <h4 style="margin: 0 0 5px 0; color: #334155;">Vehículo</h4>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Placa:</strong> {{ asignacionSeleccionada?.vehiculo }}</p>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Tipo:</strong> {{ asignacionSeleccionada?.vehiculo_tipo }}</p>
+            <p style="margin: 3px 0; font-size: 0.95rem;"><strong>Capacidad de Carga:</strong> {{ asignacionSeleccionada?.vehiculo_capacidad }} Kg</p>
+            <p style="margin: 3px 0; font-size: 0.95rem; color: #64748b;"><strong>Modelo/Marca:</strong> {{ asignacionSeleccionada?.vehiculo_info }}</p>
+          </div>
+        </div>
+        
+        <div *ngIf="asignacionSeleccionada?.observaciones" style="background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fef3c7;">
+          <h4 style="margin: 0 0 10px 0; color: #b45309;">Observaciones Iniciales</h4>
+          <p style="margin: 0; color: #92400e;">{{ asignacionSeleccionada?.observaciones }}</p>
+        </div>
+
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" style="width: 100%;" (click)="mostrarModalDetalles = false">Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <div class="toast-notification" [ngClass]="{'show': mostrarToast, 'success': tipoToast === 'success', 'error': tipoToast === 'error'}">

@@ -21,8 +21,8 @@ export class AsignacionesComponent implements OnInit {
   conductoresDisponibles: any[] = [];
   vehiculosDisponibles: any[] = [];
 
-  estadosVehiculo: string[] = ['Disponible', 'En Ruta', 'En Taller'];
-  viajes: any[] = []; // <-- Viajes activos
+  estadosVehiculo: string[] = ['Disponible', 'En Ruta', 'En Taller', 'Averiado en viaje', 'Vehículo averiado'];
+  viajes: any[] = []; 
   viendoHistorial: boolean = false;
 
   nuevaAsignacion = { conductor: '', vehiculo: '', observaciones: '' };
@@ -35,6 +35,9 @@ export class AsignacionesComponent implements OnInit {
   fechaFiltro: string = '';
   
   mostrarGuiaEstados: boolean = false;
+  mostrarModalCrear: boolean = false;
+  mostrarModalDetalles: boolean = false;
+  asignacionSeleccionada: any = null;
 
   get filtrados(): any[] {
     if (!this.terminoBusqueda) return this.asignacionesActivas;
@@ -52,6 +55,15 @@ export class AsignacionesComponent implements OnInit {
 
   abrirGuiaEstados() {
     this.mostrarGuiaEstados = true;
+  }
+
+  abrirModalCrear() {
+    this.mostrarModalCrear = true;
+  }
+
+  abrirDetalles(a: any) {
+    this.asignacionSeleccionada = a;
+    this.mostrarModalDetalles = true;
   }
 
   ngOnInit(): void {
@@ -128,16 +140,29 @@ export class AsignacionesComponent implements OnInit {
   exportarListado(tipo: 'pdf' | 'excel'): void {
     const estado = this.viendoHistorial ? 'Historial de Asignaciones' : 'Asignaciones Activas';
     const columnas = [
+      { header: '#', key: 'nro' },
       { header: 'ID', key: 'id' },
       { header: 'Conductor', key: 'conductor_nombre' },
       { header: 'Vehículo', key: 'vehiculo' },
       { header: 'Fecha Asignación', key: 'fecha_asignacion' },
       { header: 'Fecha Devolución', key: 'fecha_devolucion' }
     ];
+
+    const datosMapeados = this.filtrados.map((a, index) => ({
+      nro: index + 1,
+      id: a.id,
+      conductor_nombre: a.conductor_nombre || 'No registrado',
+      vehiculo: a.vehiculo || 'No registrado',
+      fecha_asignacion: a.fecha_asignacion || 'No registrado',
+      fecha_devolucion: a.fecha_devolucion || 'Vigente'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
     if (tipo === 'pdf') {
-      this.exportService.exportarPDF(this.filtrados, columnas, estado, 'Asignaciones');
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Asignaciones');
     } else {
-      this.exportService.exportarExcel(this.filtrados, columnas, 'Asignaciones');
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Asignaciones');
     }
   }
 
@@ -154,6 +179,7 @@ export class AsignacionesComponent implements OnInit {
         this.mostrarMensaje('¡Vínculo operativo establecido!', 'success');
         this.cargarDatosAsignacion(); 
         this.nuevaAsignacion = { conductor: '', vehiculo: '', observaciones: '' };
+        this.mostrarModalCrear = false;
       },
       error: () => this.mostrarMensaje('Error al crear la asignación.', 'error')
     });

@@ -243,6 +243,7 @@ export class ReservasComponent implements OnInit {
 
     if (nombreArchivo) {
       const columnas = [
+        { header: '#', key: 'nro' },
         { header: 'Código', key: 'codigo_reserva' },
         { header: 'Cliente', key: 'cliente_detalles.razon_social' },
         { header: 'Origen', key: 'direccion_origen' },
@@ -254,13 +255,16 @@ export class ReservasComponent implements OnInit {
 
       const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
 
-      const datosProcesados = this.filtrados.map(r => ({
+      const datosProcesados = this.filtrados.map((r, index) => ({
         ...r,
+        nro: index + 1,
         peso_export: `${r.peso_estimado_kg} Kg (${this.obtenerQuintales(r.peso_estimado_kg)} qq)`
       }));
 
+      const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
       if (tipo === 'excel') {
-        this.exportService.exportarExcel(datosProcesados, columnas, nombreArchivo, autor);
+        this.exportService.exportarExcel(datosProcesados, columnasExcel, nombreArchivo, autor);
       } else {
         this.exportService.exportarPDF(datosProcesados, columnas, 'Reporte de Reservas y Cargas', nombreArchivo, autor);
       }

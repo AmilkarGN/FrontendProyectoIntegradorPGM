@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ConductorService, Conductor, CategoriaLicencia } from '../../services/conductor';
 import { UsuarioService, Usuario } from '../../services/usuario';
 import { HttpClient } from '@angular/common/http';
+import { ExportService } from '../../services/export.service';
 import Swal from 'sweetalert2';
 
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
@@ -41,7 +42,8 @@ export class ConductoresComponent implements OnInit {
     private conductorService: ConductorService,
     private usuarioService: UsuarioService,
     private http: HttpClient,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private exportService: ExportService
   ) {}
 
   abrirGuiaEstados() {
@@ -114,6 +116,37 @@ export class ConductoresComponent implements OnInit {
 
   get filtrados(): Conductor[] {
     return this.conductores.filter(c => evaluarFiltrosDinámicos(c, this.reglasActivas));
+  }
+
+  exportarListado(tipo: 'pdf' | 'excel'): void {
+    const estado = this.filtroDisponibilidad === 'eliminados' ? 'Conductores Eliminados' : 'Catálogo de Conductores';
+    const columnas = [
+      { header: '#', key: 'nro' },
+      { header: 'Nombres', key: 'nombre' },
+      { header: 'Apellidos', key: 'apellido' },
+      { header: 'Licencia', key: 'nro_licencia' },
+      { header: 'Categoría de Licencia', key: 'categoria' },
+      { header: 'Domicilio', key: 'direccion' },
+      { header: 'Estado', key: 'estado' }
+    ];
+    
+    const datosMapeados = this.filtrados.map((c, index) => ({
+      nro: index + 1,
+      nombre: c.usuario_detalles?.nombre || 'Sin nombre',
+      apellido: c.usuario_detalles?.apellido_paterno || 'Sin apellido',
+      nro_licencia: c.nro_licencia || 'Sin licencia',
+      categoria: c.categoria_detalles?.nombre || 'Sin categoría',
+      direccion: c.direccion || 'Sin domicilio',
+      estado: c.estado || 'No Definido'
+    }));
+
+    const columnasExcel = columnas.filter(c => c.key !== 'nro');
+
+    if (tipo === 'pdf') {
+      this.exportService.exportarPDF(datosMapeados, columnas, estado, 'Conductores');
+    } else {
+      this.exportService.exportarExcel(datosMapeados, columnasExcel, 'Conductores');
+    }
   }
 
   // --- MÉTODOS DEL MODAL PRINCIPAL ---

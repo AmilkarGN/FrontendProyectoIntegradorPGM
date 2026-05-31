@@ -80,7 +80,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           }
         } 
         else if (error.status >= 500) {
-          if (!isAlertShown) {
+          const isAiEndpoint = req.url.includes('/api/vehiculos/autocompletar-ia/');
+          if (!isAiEndpoint && !isAlertShown) {
             isAlertShown = true;
             console.error('🚨 ERROR DEL SERVIDOR (5xx):', error);
             Swal.fire({

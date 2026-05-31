@@ -76,6 +76,7 @@ export class CiudadesComponent implements OnInit {
 
     if (nombreArchivo) {
       const columnas = [
+        { header: '#', key: 'nro' },
         { header: 'ID', key: 'id' },
         { header: 'Nombre Base / Ciudad', key: 'nombre' },
         { header: 'País de Operación', key: 'pais' },
@@ -84,13 +85,16 @@ export class CiudadesComponent implements OnInit {
 
       const autor = typeof window !== 'undefined' ? localStorage.getItem('usuario_nombre') || 'Administrador' : 'Administrador';
 
-      const datosProcesados = this.filtrados.map((c: any) => ({
+      const datosProcesados = this.filtrados.map((c: any, index) => ({
         ...c,
+        nro: index + 1,
         activo: !c.fecha_eliminacion ? 'Activa' : 'Inactiva'
       }));
 
+      const columnasExcel = columnas.filter(col => col.key !== 'nro');
+
       if (tipo === 'excel') {
-        this.exportService.exportarExcel(datosProcesados, columnas, nombreArchivo, autor);
+        this.exportService.exportarExcel(datosProcesados, columnasExcel, nombreArchivo, autor);
       } else {
         this.exportService.exportarPDF(datosProcesados, columnas, 'Reporte de Bases Operativas y Ciudades', nombreArchivo, autor);
       }
