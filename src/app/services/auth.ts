@@ -44,9 +44,25 @@ export class AuthService {
     }
   }
 
-  // 4. NUEVA FUNCIÓN: Registro público
   registro(datos: any) {
     return this.http.post<any>('http://127.0.0.1:8000/api/registro/', datos);
+  }
+
+  // --- MÉTODOS DE ROLES Y PERMISOS ---
+  getUsuarioActual() {
+    const userStr = localStorage.getItem('transkelion_user') || sessionStorage.getItem('transkelion_user');
+    return userStr ? JSON.parse(userStr) : null;
+  }
+
+  tieneRol(rol: string): boolean {
+    const user = this.getUsuarioActual();
+    return user && user.rol === rol;
+  }
+
+  tienePermiso(permiso: string): boolean {
+    const user = this.getUsuarioActual();
+    if (user && user.rol === 'Admin') return true; // El Admin lo puede todo
+    return user && user.permisos && user.permisos.includes(permiso);
   }
 }
 

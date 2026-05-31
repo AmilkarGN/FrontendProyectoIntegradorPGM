@@ -3,9 +3,9 @@
     <h2>Gestión de Reservas y Logística</h2>
     <div style="display: flex; gap: 10px;">
       <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="abrirGuiaEstados()" title="Manual de Estados">ℹ️ Guía de Estados</button>
-      <button class="btn-action" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 10px 15px;" (click)="ajustarTarifaGlobal()" title="Ajustar Tarifa Global">⚙️ Tarifa</button>
-      <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" (click)="exportar('pdf')">📄 PDF</button>
-      <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" (click)="exportar('excel')">📊 Excel</button>
+      <button class="btn-action" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 10px 15px;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="ajustarTarifaGlobal()" title="Ajustar Tarifa Global">⚙️ Tarifa</button>
+      <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="exportar('pdf')">📄 PDF</button>
+      <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="exportar('excel')">📊 Excel</button>
       <button class="btn-action btn-add" (click)="abrirModal()">+ Nueva Reserva</button>
     </div>
   </div>
@@ -66,9 +66,9 @@
         <td class="actions-column">
 
           <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️ Ver</button>
-          <button class="btn-action btn-edit" (click)="editarReserva(r)" title="Editar">✏️ Editar</button>
-          <button class="btn-action btn-delete" (click)="eliminarReserva(r)" title="Eliminar">🗑️ Eliminar</button>
-          <button class="btn-action" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;" (click)="generarFactura(r)" title="Generar Factura Comercial">🧾 Factura</button>
+          <button class="btn-action btn-edit" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="editarReserva(r)" title="Editar">✏️ Editar</button>
+          <button class="btn-action btn-delete" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="eliminarReserva(r)" title="Eliminar">🗑️ Eliminar</button>
+          <button class="btn-action" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="generarFactura(r)" title="Generar Factura Comercial">🧾 Factura</button>
           
         </td>
       </tr>

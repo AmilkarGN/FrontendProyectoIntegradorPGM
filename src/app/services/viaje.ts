@@ -26,6 +26,7 @@ export class ViajeService {
 
   // --- VIAJES ---
   obtenerViajes(): Observable<any[]> { return this.http.get<any[]>(`${this.apiUrl}/viajes/`); }
+  obtenerMisViajes(): Observable<any> { return this.http.get<any>(`${this.apiUrl}/viajes/mis-viajes/`); }
   crearViaje(datos: any): Observable<any> { return this.http.post(`${this.apiUrl}/viajes/`, datos); }
   actualizarEstadoViaje(codigo: string, datos: any): Observable<any> { return this.http.patch(`${this.apiUrl}/viajes/${codigo}/`, datos); }
 

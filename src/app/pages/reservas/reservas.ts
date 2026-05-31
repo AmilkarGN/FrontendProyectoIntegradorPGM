@@ -8,6 +8,7 @@ import { RutaService, Ruta } from '../../services/ruta';
 import { ExportService } from '../../services/export.service';
 import { ConfiguracionService, ConfiguracionSistema } from '../../services/configuracion.service';
 import { ViajeService } from '../../services/viaje';
+import { AuthService } from '../../services/auth.service';
 import Swal from 'sweetalert2';
 
 declare const google: any;
@@ -56,6 +57,7 @@ export class ReservasComponent implements OnInit {
     private viajeService: ViajeService,
     private route: ActivatedRoute, 
     private ngZone: NgZone,
+    public authService: AuthService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.fechaMinima = new Date().toISOString().split('T')[0];

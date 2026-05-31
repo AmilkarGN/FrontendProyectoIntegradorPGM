@@ -23,9 +23,20 @@ export class Dashboard {
   listaAlertas: any[] = [];
   mostrarNotificaciones: boolean = false;
 
+  esCliente: boolean = false;
+  nombreUsuario: string = 'Usuario';
+  rolUsuario: string = 'Rol';
+
   constructor(private authService: AuthService, private alertasService: AlertasService) {}
 
   ngOnInit() {
+    this.esCliente = this.authService.tieneRol('Cliente');
+    const user = this.authService.getUsuarioActual();
+    if (user) {
+      this.nombreUsuario = user.nombre || user.username;
+      this.rolUsuario = user.rol || 'Sin Rol';
+    }
+    
     this.alertasService.calcularAlertasGlobales();
     this.alertasService.alertas$.subscribe(alertas => {
       // En la campanita filtramos las ignoradas

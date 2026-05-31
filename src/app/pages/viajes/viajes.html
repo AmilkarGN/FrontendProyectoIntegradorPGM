@@ -3,9 +3,9 @@
     <h2>Control de Viajes y Despachos</h2>
     <div style="display: flex; gap: 10px;">
       <button class="btn-action" style="background: #e0f2fe; color: #0284c7; padding: 10px 15px;" (click)="abrirGuiaEstados()" title="Manual de Estados">ℹ️ Guía de Estados</button>
-      <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" (click)="exportar('pdf')">📄 PDF</button>
-      <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" (click)="exportar('excel')">📊 Excel</button>
-      <button class="btn-action btn-add" (click)="abrirModalViaje()">+ Programar Viaje</button>
+      <button class="btn-action" style="background: #e2e8f0; color: #475569; padding: 10px 15px;" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="exportar('pdf')">📄 PDF</button>
+      <button class="btn-action" style="background: #dcfce7; color: #166534; padding: 10px 15px;" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="exportar('excel')">📊 Excel</button>
+      <button class="btn-action btn-add" (click)="abrirModalViaje()" *ngIf="authService.tienePermiso('gestionar_todos_viajes')">+ Programar Viaje</button>
     </div>
   </div>
 
@@ -49,7 +49,7 @@
             <div class="text-fecha"><strong>Llegada:</strong> {{ v.fecha_llegada_estimada ? (v.fecha_llegada_estimada | date:'short') : 'Por definir' }}</div>
           </td>
           <td>
-            <select [ngModel]="v.estado_viaje_id || v.estado_viaje" (ngModelChange)="cambiarEstadoViaje(v, $event)" 
+            <select *ngIf="authService.tienePermiso('gestionar_todos_viajes')" [ngModel]="v.estado_viaje_id || v.estado_viaje" (ngModelChange)="cambiarEstadoViaje(v, $event)" 
                     class="status-select"
                     [ngClass]="{
                       'status-disponible': v.estado_nombre === 'Finalizado' || v.estado_nombre === 'Programado',
@@ -58,10 +58,17 @@
                     }">
               <option *ngFor="let e of estados" [value]="e.id">{{ e.nombre }}</option>
             </select>
+            <!-- Vista Solo Lectura -->
+            <span *ngIf="!authService.tienePermiso('gestionar_todos_viajes')" 
+                  class="badge" 
+                  [ngClass]="{'badge-taller': v.estado_nombre === 'Averiado en viaje' || v.estado_nombre === 'Cancelado', 'badge-success': v.estado_nombre === 'Finalizado'}">
+              {{ v.estado_nombre }}
+            </span>
           </td>
           <td>
             <div class="acciones-flex">
               <button class="btn-icon btn-gps" 
+                      *ngIf="authService.tienePermiso('gestionar_todos_viajes')"
                       [ngClass]="{'parpadeo-activo': viajeEnRastreo === v.codigo_viaje}" 
                       (click)="toggleRastreo(v)" 
                       title="Transmitir Ubicación en Vivo">
@@ -69,9 +76,9 @@
               </button>
               
               <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️ Ver</button>
-              <button class="btn-icon btn-dinero" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Viáticos</button>
-              <button class="btn-icon btn-editar" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
-              <button class="btn-icon btn-eliminar" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
+              <button class="btn-icon btn-dinero" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Viáticos</button>
+              <button class="btn-icon btn-editar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
+              <button class="btn-icon btn-eliminar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
             </div>
           </td>
         </tr>

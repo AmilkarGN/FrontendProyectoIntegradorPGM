@@ -3,9 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface Rol {
-  id?: number; // <-- Lo hacemos opcional con el signo de interrogación
+  id?: number; 
   nombre_rol: string; 
   descripcion?: string;
+  permisos?: string[];
 }
 
 @Injectable({

@@ -7,6 +7,8 @@ import { authGuard } from './guards/auth-guard';
 // 2. Dashboard
 import { Dashboard } from './pages/dashboard/dashboard'; 
 
+import { permisoGuard } from './guards/permiso.guard';
+
 // 3. Páginas Hijas 
 import { Inicio } from './pages/inicio/inicio';
 import { MapaVivo } from './pages/mapa-vivo/mapa-vivo';
@@ -41,26 +43,31 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: 'inicio', component: Inicio },
-      { path: 'mapa', component: MapaVivo },
-      { path: 'calor', component: MapaCalor },
-      { path: 'visor-carga', component: VisorCarga },
+      { path: 'mapa', component: MapaVivo, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
+      { path: 'calor', component: MapaCalor, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
+      { path: 'visor-carga', component: VisorCarga, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
       { path: 'calendario', component: CalendarioLogistico },
-      { path: 'ciudades', component: CiudadesComponent },
+      { path: 'ciudades', component: CiudadesComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
       
       { path: '', redirectTo: 'inicio', pathMatch: 'full' },
-      { path: 'usuarios', component: UsuariosComponent },
-      { path: 'roles', component: RolesComponent },
-      { path: 'conductores', component: ConductoresComponent },
-      { path: 'asignaciones', component: AsignacionesComponent },
-      { path: 'vehiculos', component: VehiculosComponent },
-      {path: 'config-flota', component: ConfigFlotaComponent},
-      {path: 'clientes', component: ClientesComponent},
-      {path: 'rutas', component: RutasComponent},
-      {path: 'reservas', component: ReservasComponent},
-      {path: 'viajes', component: ViajesComponent},
-      {path: 'monitor-fatiga', component: MonitorFatigaComponent},
-      {path: 'admin-fatiga', component: AdminFatigaComponent},
-      {path: 'alertas', component: AlertasComponent}
+      { path: 'usuarios', component: UsuariosComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_usuarios' } },
+      { path: 'roles', component: RolesComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_roles' } },
+      { path: 'conductores', component: ConductoresComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_conductores' } },
+      { path: 'asignaciones', component: AsignacionesComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_vehiculos' } },
+      { path: 'vehiculos', component: VehiculosComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_vehiculos' } },
+      { path: 'config-flota', component: ConfigFlotaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_vehiculos' } },
+      { path: 'clientes', component: ClientesComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_clientes' } },
+      { path: 'rutas', component: RutasComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_rutas' } },
+      
+      // Reservas y Viajes tienen permisos híbridos (los clientes pueden ver su parte, los admins todo)
+      // Por eso NO les ponemos un guard restrictivo a nivel de ruta para que el cliente pueda entrar,
+      // la seguridad se maneja a nivel de componente y API.
+      { path: 'reservas', component: ReservasComponent },
+      { path: 'viajes', component: ViajesComponent },
+      
+      { path: 'monitor-fatiga', component: MonitorFatigaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } },
+      { path: 'admin-fatiga', component: AdminFatigaComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } },
+      { path: 'alertas', component: AlertasComponent, canActivate: [permisoGuard], data: { permiso: 'gestionar_alertas' } }
     ]
   },
   // Si alguien escribe una URL que no existe, lo mandamos al inicio (Landing)

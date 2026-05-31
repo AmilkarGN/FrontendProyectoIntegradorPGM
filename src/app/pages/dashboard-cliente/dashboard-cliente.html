@@ -1,0 +1,104 @@
+<div class="cliente-dashboard fade-in">
+  <!-- Header Glass -->
+  <div class="dashboard-header-glass">
+    <div class="header-text">
+      <h2 class="title">Mi Panel de Seguimiento</h2>
+      <p class="subtitle">Rastrea tus envíos en tiempo real y gestiona tus reservas de carga.</p>
+    </div>
+    <button class="btn-nueva-reserva" routerLink="/dashboard/reservas">
+      <span class="material-symbols-rounded">add_box</span>
+      Nueva Reserva
+    </button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card glass">
+      <div class="kpi-icon blue"><span class="material-symbols-rounded">local_shipping</span></div>
+      <div class="kpi-info">
+        <h3>{{ viajesActivos.length }}</h3>
+        <p>Envíos Activos</p>
+      </div>
+    </div>
+    <div class="kpi-card glass">
+      <div class="kpi-icon green"><span class="material-symbols-rounded">task_alt</span></div>
+      <div class="kpi-info">
+        <h3>{{ historial.length }}</h3>
+        <p>Entregados (Mes)</p>
+      </div>
+    </div>
+    <div class="kpi-card glass">
+      <div class="kpi-icon orange"><span class="material-symbols-rounded">pending_actions</span></div>
+      <div class="kpi-info">
+        <h3>{{ reservasPendientes }}</h3>
+        <p>Reservas Pendientes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracking Section -->
+  <div style="margin-top: 35px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <span class="material-symbols-rounded" style="color: #6366f1; font-size: 1.8rem;">explore</span>
+    <h3 class="section-title" style="margin: 0; font-size: 1.4rem; color: #1e293b;">Seguimiento en Vivo</h3>
+  </div>
+
+  <div class="tracking-grid">
+    <div class="tracking-card glass" *ngFor="let viaje of viajesActivos">
+      <div class="card-header">
+        <span class="viaje-id"><span class="material-symbols-rounded" style="font-size: 1.2rem; margin-right: 5px; color: #94a3b8;">tag</span>{{ viaje.id }}</span>
+        <span class="badge" [ngClass]="{'en-transito': viaje.estado === 'En Tránsito', 'cargando': viaje.estado === 'Cargando'}">{{ viaje.estado }}</span>
+      </div>
+      
+      <div class="route-info">
+        <div class="route-point">
+          <span class="dot origin"></span>
+          <p class="city-name">{{ viaje.origen }}</p>
+          <span class="label-tiny">Origen</span>
+        </div>
+        <div class="route-line-container">
+          <div class="route-line"></div>
+          <span class="material-symbols-rounded truck-icon">local_shipping</span>
+        </div>
+        <div class="route-point text-right">
+          <span class="dot dest"></span>
+          <p class="city-name">{{ viaje.destino }}</p>
+          <span class="label-tiny">Destino</span>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span style="font-weight: 500; color: #475569;">Avance del viaje</span>
+          <span class="pct">{{ viaje.porcentaje }}%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" [style.width.%]="viaje.porcentaje"></div>
+        </div>
+        <div class="eta-box">
+          <span class="material-symbols-rounded" style="color: #10b981;">schedule</span>
+          <span>Llegada estimada (ETA): <strong style="color: #047857;">{{ viaje.eta }}</strong></span>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="info-row">
+          <span class="material-symbols-rounded">location_on</span>
+          <span><strong>Último reporte:</strong> {{ viaje.ultima_ubicacion }}</span>
+        </div>
+        <div class="info-row">
+          <span class="material-symbols-rounded">inventory_2</span>
+          <span><strong>Carga:</strong> {{ viaje.carga }}</span>
+        </div>
+        
+        <div class="action-buttons">
+          <button class="btn-outline">
+            <span class="material-symbols-rounded">map</span> Ver en Mapa
+          </button>
+          <button class="btn-outline">
+            <span class="material-symbols-rounded">chat</span> Contactar Op.
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

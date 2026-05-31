@@ -5,6 +5,7 @@ import { ViajeService } from '../../services/viaje';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ExportService } from '../../services/export.service';
+import { AuthService } from '../../services/auth.service';
 import Swal from 'sweetalert2';
 import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDinámicos } from '../../shared/query-builder/query-builder';
 
@@ -61,7 +62,8 @@ export class ViajesComponent implements OnInit {
     private viajeService: ViajeService,
     private route: ActivatedRoute,
     private exportService: ExportService,
-    private http: HttpClient
+    private http: HttpClient,
+    public authService: AuthService
   ) {}
 
   ngOnInit(): void {

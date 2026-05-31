@@ -4,7 +4,9 @@
 </div>
 
 <!-- Contenido Principal -->
-<div class="dashboard-overview fade-in" *ngIf="!cargando">
+<app-dashboard-cliente *ngIf="!cargando && esCliente"></app-dashboard-cliente>
+
+<div class="dashboard-overview fade-in" *ngIf="!cargando && !esCliente">
   
   <header class="dashboard-header">
     <h1>{{ saludo }}, Administrador</h1>
@@ -58,7 +60,9 @@
       </div>
 
       <!-- TABLA DE ÚLTIMOS VIAJES -->
-      <div class="table-container">
+      <app-dashboard-cliente *ngIf="esCliente"></app-dashboard-cliente>
+
+      <div class="inicio-container" *ngIf="!esCliente">
         <h3>📋 Últimos Viajes Asignados</h3>
         <table class="dashboard-table">
           <thead>

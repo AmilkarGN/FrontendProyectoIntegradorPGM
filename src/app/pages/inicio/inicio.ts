@@ -3,10 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router'; // 👈 Importamos el Router
 
+import { DashboardCliente } from '../dashboard-cliente/dashboard-cliente';
+import { AuthService } from '../../services/auth.service';
+
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DashboardCliente],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css'],
 })
@@ -22,11 +25,19 @@ export class Inicio implements OnInit {
   cargando = true;
   saludo: string = '';
   fechaActual: string = '';
+  esCliente: boolean = false;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private authService: AuthService) {}
 
   ngOnInit(): void {
-    this.obtenerMetricas();
+    this.esCliente = this.authService.tieneRol('Cliente');
+    
+    if (!this.esCliente) {
+      this.obtenerMetricas();
+    } else {
+      // El dashboard del cliente maneja su propia carga
+      this.cargando = false;
+    }
     this.generarSaludo();
   }
 

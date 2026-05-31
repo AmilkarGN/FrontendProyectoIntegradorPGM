@@ -8,69 +8,70 @@
 
     <div class="sidebar-nav">
       
-      <p class="nav-section-title">Comando Logístico</p>
+      <p class="nav-section-title" *ngIf="!esCliente">Comando Logístico</p>
       
       <a routerLink="inicio" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">dashboard</span> <span class="nav-text">Vista General</span>
+        <span class="material-symbols-rounded icon">dashboard</span> <span class="nav-text">{{ esCliente ? 'Mi Panel' : 'Vista General' }}</span>
       </a>
-      <a routerLink="mapa" routerLinkActive="active" class="nav-item">
+      <a routerLink="mapa" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">satellite_alt</span> <span class="nav-text">Mapa en Vivo</span>
       </a>
-      <a routerLink="calor" routerLinkActive="active" class="nav-item">
+      <a routerLink="calor" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">map</span> <span class="nav-text">Mapa de Calor</span>
       </a>
-      <a routerLink="calendario" routerLinkActive="active" class="nav-item">
+      <a routerLink="calendario" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">calendar_month</span> <span class="nav-text">Agenda Operativa</span>
       </a>
 
       <p class="nav-section-title">Operaciones</p>
       <a routerLink="reservas" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">inventory_2</span> <span class="nav-text">Reservas (Cargas)</span>
+        <span class="material-symbols-rounded icon">inventory_2</span> <span class="nav-text">{{ esCliente ? 'Mis Reservas' : 'Reservas (Cargas)' }}</span>
       </a>
-      <a routerLink="visor-carga" routerLinkActive="active" class="nav-item">
+      <a routerLink="visor-carga" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">view_in_ar</span> <span class="nav-text">Visor de Carga 3D</span>
       </a>
       <a routerLink="viajes" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">route</span> <span class="nav-text">Viajes Asignados</span>
+        <span class="material-symbols-rounded icon">route</span> <span class="nav-text">{{ esCliente ? 'Mis Envíos (Viajes)' : 'Viajes Asignados' }}</span>
       </a>
-      <a routerLink="rutas" routerLinkActive="active" class="nav-item">
+      <a routerLink="rutas" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">alt_route</span> <span class="nav-text">Rutas y Tramos</span>
       </a>
-      <a routerLink="ciudades" routerLinkActive="active" class="nav-item">
+      <a routerLink="ciudades" routerLinkActive="active" class="nav-item" *ngIf="!esCliente">
         <span class="material-symbols-rounded icon">location_city</span> <span class="nav-text">Ciudades</span>
       </a>
 
-      <p class="nav-section-title">Flota y Personal</p>
-      <a routerLink="vehiculos" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">local_shipping</span> <span class="nav-text">Vehículos</span>
-      </a>
-      <a routerLink="conductores" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">badge</span> <span class="nav-text">Conductores</span>
-      </a>
-      <a routerLink="asignaciones" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">assignment_ind</span> <span class="nav-text">Asignaciones</span>
-      </a>
-      <a routerLink="config-flota" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">settings_applications</span> <span class="nav-text">Configuración Flota</span>
-      </a>
-      <a routerLink="monitor-fatiga" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">visibility</span> <span class="nav-text">Monitor de Fatiga IA</span>
-      </a>
-      <a routerLink="admin-fatiga" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">history</span> <span class="nav-text">Historial de Fatiga</span>
-      </a>
+      <div *ngIf="!esCliente">
+        <p class="nav-section-title">Flota y Personal</p>
+        <a routerLink="vehiculos" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">local_shipping</span> <span class="nav-text">Vehículos</span>
+        </a>
+        <a routerLink="conductores" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">badge</span> <span class="nav-text">Conductores</span>
+        </a>
+        <a routerLink="asignaciones" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">assignment_ind</span> <span class="nav-text">Asignaciones</span>
+        </a>
+        <a routerLink="config-flota" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">settings_applications</span> <span class="nav-text">Configuración Flota</span>
+        </a>
+        <a routerLink="monitor-fatiga" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">visibility</span> <span class="nav-text">Monitor de Fatiga IA</span>
+        </a>
+        <a routerLink="admin-fatiga" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">history</span> <span class="nav-text">Historial de Fatiga</span>
+        </a>
 
-      <p class="nav-section-title">Administración</p>
-      <a routerLink="clientes" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">domain</span> <span class="nav-text">Clientes</span>
-      </a>
-      <a routerLink="usuarios" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">group</span> <span class="nav-text">Usuarios Sistema</span>
-      </a>
-      <a routerLink="roles" routerLinkActive="active" class="nav-item">
-        <span class="material-symbols-rounded icon">admin_panel_settings</span> <span class="nav-text">Roles y Permisos</span>
-      </a>
-
+        <p class="nav-section-title">Administración</p>
+        <a routerLink="clientes" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">domain</span> <span class="nav-text">Clientes</span>
+        </a>
+        <a routerLink="usuarios" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">group</span> <span class="nav-text">Usuarios Sistema</span>
+        </a>
+        <a routerLink="roles" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-rounded icon">admin_panel_settings</span> <span class="nav-text">Roles y Permisos</span>
+        </a>
+      </div>
     </div>
     
     <div class="sidebar-footer">
@@ -79,8 +80,8 @@
           <span class="material-symbols-rounded">person</span>
         </div>
         <div class="user-info">
-          <span class="user-name">Administrador</span>
-          <span class="user-role">TransKelion App</span>
+          <span class="user-name" style="text-transform: capitalize;">{{ nombreUsuario }}</span>
+          <span class="user-role">{{ rolUsuario }}</span>
         </div>
       </div>
       <button (click)="cerrarSesion()" class="btn-logout" title="Cerrar Sesión">

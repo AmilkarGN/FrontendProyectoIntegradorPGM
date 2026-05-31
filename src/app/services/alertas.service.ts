@@ -5,6 +5,7 @@ import { VehiculoService, Vehiculo } from './vehiculo';
 import { ConductorService, Conductor } from './conductor';
 import { ReservaService, Reserva } from './reserva';
 import { ViajeService } from './viaje';
+import { AuthService } from './auth.service';
 
 export interface AlertaItem {
   id: string;
@@ -31,7 +32,8 @@ export class AlertasService {
     private vehiculoService: VehiculoService,
     private conductorService: ConductorService,
     private reservaService: ReservaService,
-    private viajeService: ViajeService
+    private viajeService: ViajeService,
+    private authService: AuthService
   ) { 
     // Recuperar alertas ignoradas de localStorage si existe
     if (typeof window !== 'undefined') {
@@ -68,43 +70,47 @@ export class AlertasService {
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
 
-      // 1. VEHÍCULOS
-      vehiculos.forEach(v => {
-        if (v.vencimiento_soat) {
-          const fSoat = new Date(v.vencimiento_soat);
-          const diffDias = this.diferenciaDias(hoy, fSoat);
-          if (diffDias < 0) {
-            alertasNuevas.push({ id: 'v_s_'+v.placa, tipo: 'vehiculo', prioridad: 'critica', titulo: `SOAT Vencido (${v.placa})`, mensaje: `El SOAT venció el ${v.vencimiento_soat}`, fechaRef: v.vencimiento_soat, enlace: '/dashboard/vehiculos', registroId: v.placa });
-          } else if (diffDias <= 30) {
-            alertasNuevas.push({ id: 'v_s_'+v.placa, tipo: 'vehiculo', prioridad: 'preventiva', titulo: `SOAT por Vencer (${v.placa})`, mensaje: `Vence en ${diffDias} días.`, fechaRef: v.vencimiento_soat, enlace: '/dashboard/vehiculos', registroId: v.placa });
+      // 1. VEHÍCULOS (Solo Admin)
+      if (this.authService.tienePermiso('gestionar_vehiculos')) {
+        vehiculos.forEach(v => {
+          if (v.vencimiento_soat) {
+            const fSoat = new Date(v.vencimiento_soat);
+            const diffDias = this.diferenciaDias(hoy, fSoat);
+            if (diffDias < 0) {
+              alertasNuevas.push({ id: 'v_s_'+v.placa, tipo: 'vehiculo', prioridad: 'critica', titulo: `SOAT Vencido (${v.placa})`, mensaje: `El SOAT venció el ${v.vencimiento_soat}`, fechaRef: v.vencimiento_soat, enlace: '/dashboard/vehiculos', registroId: v.placa });
+            } else if (diffDias <= 30) {
+              alertasNuevas.push({ id: 'v_s_'+v.placa, tipo: 'vehiculo', prioridad: 'preventiva', titulo: `SOAT por Vencer (${v.placa})`, mensaje: `Vence en ${diffDias} días.`, fechaRef: v.vencimiento_soat, enlace: '/dashboard/vehiculos', registroId: v.placa });
+            }
           }
-        }
-        
-        if (v.vencimiento_inspeccion_tecnica) {
-          const fIns = new Date(v.vencimiento_inspeccion_tecnica);
-          const diffDias = this.diferenciaDias(hoy, fIns);
-          if (diffDias < 0) {
-            alertasNuevas.push({ id: 'v_i_'+v.placa, tipo: 'vehiculo', prioridad: 'critica', titulo: `Inspección Vencida (${v.placa})`, mensaje: `Venció el ${v.vencimiento_inspeccion_tecnica}`, fechaRef: v.vencimiento_inspeccion_tecnica, enlace: '/dashboard/vehiculos', registroId: v.placa });
-          } else if (diffDias <= 30) {
-            alertasNuevas.push({ id: 'v_i_'+v.placa, tipo: 'vehiculo', prioridad: 'preventiva', titulo: `Inspección por Vencer (${v.placa})`, mensaje: `Vence en ${diffDias} días.`, fechaRef: v.vencimiento_inspeccion_tecnica, enlace: '/dashboard/vehiculos', registroId: v.placa });
+          
+          if (v.vencimiento_inspeccion_tecnica) {
+            const fIns = new Date(v.vencimiento_inspeccion_tecnica);
+            const diffDias = this.diferenciaDias(hoy, fIns);
+            if (diffDias < 0) {
+              alertasNuevas.push({ id: 'v_i_'+v.placa, tipo: 'vehiculo', prioridad: 'critica', titulo: `Inspección Vencida (${v.placa})`, mensaje: `Venció el ${v.vencimiento_inspeccion_tecnica}`, fechaRef: v.vencimiento_inspeccion_tecnica, enlace: '/dashboard/vehiculos', registroId: v.placa });
+            } else if (diffDias <= 30) {
+              alertasNuevas.push({ id: 'v_i_'+v.placa, tipo: 'vehiculo', prioridad: 'preventiva', titulo: `Inspección por Vencer (${v.placa})`, mensaje: `Vence en ${diffDias} días.`, fechaRef: v.vencimiento_inspeccion_tecnica, enlace: '/dashboard/vehiculos', registroId: v.placa });
+            }
           }
-        }
-      });
+        });
+      }
 
-      // 2. CONDUCTORES
-      conductores.forEach(c => {
-        if (c.vencimiento_licencia) {
-          const fLic = new Date(c.vencimiento_licencia);
-          const diffDias = this.diferenciaDias(hoy, fLic);
-          if (diffDias < 0) {
-            const nom = c.usuario_detalles?.nombre || 'Desconocido';
-            alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'critica', titulo: `Licencia Vencida (${nom})`, mensaje: `La licencia caducó el ${c.vencimiento_licencia}`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
-          } else if (diffDias <= 30) {
-            const nom = c.usuario_detalles?.nombre || 'Desconocido';
-            alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'preventiva', titulo: `Licencia por Vencer (${nom})`, mensaje: `Caduca en ${diffDias} días.`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
+      // 2. CONDUCTORES (Solo Admin)
+      if (this.authService.tienePermiso('gestionar_conductores')) {
+        conductores.forEach(c => {
+          if (c.vencimiento_licencia) {
+            const fLic = new Date(c.vencimiento_licencia);
+            const diffDias = this.diferenciaDias(hoy, fLic);
+            if (diffDias < 0) {
+              const nom = c.usuario_detalles?.nombre || 'Desconocido';
+              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'critica', titulo: `Licencia Vencida (${nom})`, mensaje: `La licencia caducó el ${c.vencimiento_licencia}`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
+            } else if (diffDias <= 30) {
+              const nom = c.usuario_detalles?.nombre || 'Desconocido';
+              alertasNuevas.push({ id: 'c_l_'+c.id, tipo: 'conductor', prioridad: 'preventiva', titulo: `Licencia por Vencer (${nom})`, mensaje: `Caduca en ${diffDias} días.`, fechaRef: c.vencimiento_licencia, enlace: '/dashboard/conductores', registroId: c.id! });
+            }
           }
-        }
-      });
+        });
+      }
 
       // 3. RESERVAS
       reservas.forEach(r => {

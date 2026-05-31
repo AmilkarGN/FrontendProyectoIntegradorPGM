@@ -46,4 +46,32 @@ export class AuthService {
     }
     this.router.navigate(['/login']);
   }
+
+  // --- MÉTODOS DE ROLES Y PERMISOS ---
+  getUsuarioActual() {
+    if (isPlatformBrowser(this.platformId)) {
+      const userStr = localStorage.getItem('transkelion_user') || sessionStorage.getItem('transkelion_user');
+      return userStr ? JSON.parse(userStr) : null;
+    }
+    return null;
+  }
+
+  tieneRol(rol: string): boolean {
+    const user = this.getUsuarioActual();
+    return user && user.rol === rol;
+  }
+
+  tienePermiso(permiso: string): boolean {
+    const user = this.getUsuarioActual();
+    
+    // Si es superadmin en cualquiera de sus formas, entra a todo
+    if (user) {
+      const rolStr = (typeof user.rol === 'string') ? user.rol : (user.rol?.nombre_rol || '');
+      if (rolStr === 'Admin' || rolStr === 'Administrador') {
+        return true;
+      }
+    }
+
+    return user && user.permisos && user.permisos.includes(permiso);
+  }
 }
