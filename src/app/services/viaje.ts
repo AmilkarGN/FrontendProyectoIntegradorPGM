@@ -42,6 +42,15 @@ export class ViajeService {
   eliminarViaje(codigo: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/viajes/${codigo}/`);
   }
+
+  // --- OPTIMIZACIÓN IA ---
+  optimizarRuta(codigo: string, latActual?: number, lngActual?: number): Observable<any> {
+    let url = `${this.apiUrl}/viajes/${codigo}/optimizar_ruta/`;
+    if (latActual && lngActual) {
+      url += `?lat_actual=${latActual}&lng_actual=${lngActual}`;
+    }
+    return this.http.get<any>(url);
+  }
   // ==========================================
   // 📡 MOTOR GLOBAL DE RASTREO GPS
   // ==========================================

@@ -35,6 +35,8 @@ export class ViajesComponent implements OnInit {
   mostrarGuiaEstados: boolean = false;
 
   viajeSeleccionado: any = null;
+  rutaOptimizada: any[] | null = null;
+  mapaAdmin: any = null;
 
   nuevoViaje: any = { 
     codigo_viaje: '', 
@@ -479,6 +481,7 @@ alSeleccionarVehiculo() {
 
   abrirDetalles(v: any) {
     this.viajeSeleccionado = v;
+    this.rutaOptimizada = null;
     this.mostrarModalDetalles = true;
     
     if (this.viajeSeleccionado.reservas_detalle?.length > 0) {
@@ -492,27 +495,190 @@ alSeleccionarVehiculo() {
     const g = (window as any).google.maps;
     const directionsService = new g.DirectionsService();
     const directionsRenderer = new g.DirectionsRenderer({
-      polylineOptions: { strokeColor: '#2563eb', strokeWeight: 5 }
+      polylineOptions: { strokeColor: '#2563eb', strokeWeight: 5 },
+      suppressMarkers: true // Suprimir marcadores por defecto (A, B, C...)
     });
 
-    const primeraReserva = this.viajeSeleccionado.reservas_detalle[0];
-    
+    let originLatLng;
+    let destLatLng;
+    let waypoints: any[] = [];
+    let allNodes: any[] = [];
+
+    if (this.rutaOptimizada && this.rutaOptimizada.length >= 2) {
+      originLatLng = { lat: Number(this.rutaOptimizada[0].lat), lng: Number(this.rutaOptimizada[0].lng) };
+      destLatLng = { lat: Number(this.rutaOptimizada[this.rutaOptimizada.length - 1].lat), lng: Number(this.rutaOptimizada[this.rutaOptimizada.length - 1].lng) };
+      allNodes.push(originLatLng);
+      for (let i = 1; i < this.rutaOptimizada.length - 1; i++) {
+        const wp = { lat: Number(this.rutaOptimizada[i].lat), lng: Number(this.rutaOptimizada[i].lng) };
+        waypoints.push({ location: wp, stopover: true });
+        allNodes.push(wp);
+      }
+      allNodes.push(destLatLng);
+    } else {
+      const primeraReserva = this.viajeSeleccionado.reservas_detalle[0];
+      originLatLng = { lat: Number(primeraReserva.latitud_origen), lng: Number(primeraReserva.longitud_origen) };
+      destLatLng = { lat: Number(primeraReserva.latitud_destino), lng: Number(primeraReserva.longitud_destino) };
+      allNodes.push(originLatLng, destLatLng);
+    }
+
     const request = {
-      origin: { lat: primeraReserva.latitud_origen, lng: primeraReserva.longitud_origen },
-      destination: { lat: primeraReserva.latitud_destino, lng: primeraReserva.longitud_destino },
+      origin: originLatLng,
+      destination: destLatLng,
+      waypoints: waypoints,
+      optimizeWaypoints: false,
       travelMode: g.TravelMode.DRIVING
     };
 
     setTimeout(() => {
       const mapaElement = document.getElementById('mapa-detalle');
       if (mapaElement) {
-        const mapa = new g.Map(mapaElement, { zoom: 12, center: request.origin });
-        directionsRenderer.setMap(mapa);
+        this.mapaAdmin = new g.Map(mapaElement, { zoom: 12, center: request.origin });
+        directionsRenderer.setMap(this.mapaAdmin);
         directionsService.route(request, (result: any, status: any) => {
-          if (status === 'OK') directionsRenderer.setDirections(result);
+          if (status === 'OK') {
+            directionsRenderer.setDirections(result);
+            
+            // Dibujar marcadores personalizados
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            allNodes.forEach((node, index) => {
+              let labelText = "";
+              let bgColor = "#ea4335"; // Red by default
+              if (index === 0) {
+                labelText = "Inicio";
+                bgColor = "#10b981"; // Green for start
+              } else if (index === allNodes.length - 1) {
+                labelText = "Final";
+                bgColor = "#000000"; // Black for end
+              } else {
+                labelText = alphabet[(index - 1) % alphabet.length];
+              }
+              
+              new g.Marker({
+                position: node,
+                map: this.mapaAdmin,
+                label: { text: labelText, color: 'white', fontWeight: 'bold' },
+                icon: {
+                  path: g.SymbolPath.CIRCLE,
+                  fillColor: bgColor,
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: 'white',
+                  scale: index === 0 || index === allNodes.length - 1 ? 14 : 10
+                }
+              });
+            });
+          }
         });
       }
     }, 200);
+  }
+
+  animarSimulacionIAAdmin(callback: () => void) {
+    if (!this.mapaAdmin || !this.rutaOptimizada || typeof window === 'undefined' || !(window as any).google) { 
+      callback(); return; 
+    }
+    
+    const g = (window as any).google.maps;
+    const nodes = this.rutaOptimizada.map((n: any) => ({ lat: Number(n.lat), lng: Number(n.lng) }));
+    if (nodes.length < 2) { callback(); return; }
+
+    const polylines: any[] = [];
+    let iterations = 0;
+    const maxIterations = 15;
+    
+    const bounds = new g.LatLngBounds();
+    nodes.forEach((n: any) => bounds.extend(n));
+    this.mapaAdmin.fitBounds(bounds);
+    
+    const drawInterval = setInterval(() => {
+      polylines.forEach(p => p.setMap(null));
+      polylines.length = 0;
+
+      const shuffled = [...nodes].sort(() => 0.5 - Math.random());
+      const poly = new g.Polyline({ path: shuffled, geodesic: true, strokeColor: '#38bdf8', strokeOpacity: 0.8, strokeWeight: 4, map: this.mapaAdmin });
+      polylines.push(poly);
+
+      iterations++;
+      if (iterations >= maxIterations) {
+        clearInterval(drawInterval);
+        polylines.forEach(p => p.setMap(null));
+        callback();
+      }
+    }, 100);
+  }
+
+  optimizarRutaHormigasAdmin() {
+    Swal.fire({
+      title: 'Iniciando IA Logística',
+      text: 'Se iniciará una competencia en los servidores entre la Colonia de Hormigas y el Algoritmo Genético...',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Iniciar Cálculo'
+    }).then((res) => {
+      if (res.isConfirmed) this.llamarEndpointOptimizacionAdmin();
+    });
+  }
+
+  llamarEndpointOptimizacionAdmin() {
+    Swal.fire({ title: 'Analizando...', html: 'Permutando miles de rutas posibles.<br>Por favor espere.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+    // Para efectos de demostración, capturamos el GPS del Administrador.
+    // En un caso real de producción, el admin vería la última ubicación reportada por el conductor.
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          this.ejecutarLlamadaBackendOptimizacionAdmin(lat, lng);
+        },
+        (error) => {
+          console.warn('GPS Denegado o sin señal. Usando primer punto de recogida por defecto.');
+          this.ejecutarLlamadaBackendOptimizacionAdmin(undefined, undefined);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      this.ejecutarLlamadaBackendOptimizacionAdmin(undefined, undefined);
+    }
+  }
+
+  ejecutarLlamadaBackendOptimizacionAdmin(lat?: number, lng?: number) {
+    this.viajeService.optimizarRuta(this.viajeSeleccionado.codigo_viaje, lat, lng).subscribe({
+      next: (response: any) => {
+        const aco = response.aco;
+        const ga = response.ga;
+        const tablaHtml = `
+          <table style="width:100%; text-align:left; border-collapse: collapse; margin-top:10px;">
+            <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+              <th style="padding:8px;">Métrica</th><th style="padding:8px; color:#4f46e5;">🐜 ACO</th><th style="padding:8px; color:#0ea5e9;">🧬 Genético</th>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:8px;"><b>Distancia (Km)</b></td><td style="padding:8px; font-weight:bold;">${aco.distancia_km}</td><td style="padding:8px; font-weight:bold;">${ga.distancia_km}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px;"><b>T. Cálculo (ms)</b></td><td style="padding:8px;">${aco.tiempo_ms} ms</td><td style="padding:8px;">${ga.tiempo_ms} ms</td>
+            </tr>
+          </table>
+        `;
+        Swal.fire({
+          icon: 'success', title: '¡Análisis Completado!', html: tablaHtml, showCancelButton: true, showDenyButton: true,
+          confirmButtonText: '🐜 Usar Hormigas', denyButtonText: '🧬 Usar Genético', cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#4f46e5', denyButtonColor: '#0ea5e9'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.rutaOptimizada = aco.ruta_optimizada;
+            this.animarSimulacionIAAdmin(() => { this.dibujarRutaDetalle(); });
+          } else if (result.isDenied) {
+            this.rutaOptimizada = ga.ruta_optimizada;
+            this.animarSimulacionIAAdmin(() => { this.dibujarRutaDetalle(); });
+          }
+        });
+      },
+      error: (err) => {
+        console.error(err);
+        Swal.fire('Error IA', 'No se pudo procesar la optimización neuronal.', 'error');
+      }
+    });
   }
 
   // --- CRUD VIÁTICOS ---

@@ -89,6 +89,8 @@ export class ViajeActivoConductorComponent implements OnInit {
     }
   }
 
+  rutaOptimizada: any[] | null = null;
+
   dibujarRutaGoogleMaps() {
     if (!this.isBrowser || !this.viajeActivo || !this.viajeActivo.reservas_detalle?.length) return;
     
@@ -100,35 +102,218 @@ export class ViajeActivoConductorComponent implements OnInit {
         this.directionsService = new g.DirectionsService();
         this.directionsRenderer = new g.DirectionsRenderer({
           map: mapaReal,
-          suppressMarkers: false,
+          suppressMarkers: true,
           polylineOptions: { strokeColor: '#4f46e5', strokeWeight: 6, strokeOpacity: 0.8 }
         });
       }
 
-      // Tomamos la primera reserva como referencia principal
-      const primeraReserva = this.viajeActivo.reservas_detalle[0];
-      
-      if (primeraReserva.latitud_origen && primeraReserva.latitud_destino) {
-        const originLatLng = { lat: parseFloat(primeraReserva.latitud_origen), lng: parseFloat(primeraReserva.longitud_origen) };
-        const destLatLng = { lat: parseFloat(primeraReserva.latitud_destino), lng: parseFloat(primeraReserva.longitud_destino) };
+      let originLatLng;
+      let destLatLng;
+      let waypoints: any[] = [];
+      let allNodes: any[] = [];
 
-        const request = {
-          origin: originLatLng,
-          destination: destLatLng,
-          travelMode: g.TravelMode.DRIVING
-        };
-
-        this.directionsService.route(request, (response: any, status: any) => {
-          this.ngZone.run(() => {
-            if (status === 'OK') {
-              this.directionsRenderer.setDirections(response);
-            } else {
-              console.warn('No se pudo trazar la ruta de Google Maps', status);
-            }
-          });
-        });
+      if (this.rutaOptimizada && this.rutaOptimizada.length >= 2) {
+        // Asegurar que son números
+        originLatLng = { lat: Number(this.rutaOptimizada[0].lat), lng: Number(this.rutaOptimizada[0].lng) };
+        destLatLng = { lat: Number(this.rutaOptimizada[this.rutaOptimizada.length - 1].lat), lng: Number(this.rutaOptimizada[this.rutaOptimizada.length - 1].lng) };
+        allNodes.push(originLatLng);
+        
+        for (let i = 1; i < this.rutaOptimizada.length - 1; i++) {
+          const wp = { lat: Number(this.rutaOptimizada[i].lat), lng: Number(this.rutaOptimizada[i].lng) };
+          waypoints.push({ location: wp, stopover: true });
+          allNodes.push(wp);
+        }
+        allNodes.push(destLatLng);
+      } else {
+        // Fallback: solo la primera reserva
+        const primeraReserva = this.viajeActivo.reservas_detalle[0];
+        if (primeraReserva.latitud_origen && primeraReserva.latitud_destino) {
+          originLatLng = { lat: Number(primeraReserva.latitud_origen), lng: Number(primeraReserva.longitud_origen) };
+          destLatLng = { lat: Number(primeraReserva.latitud_destino), lng: Number(primeraReserva.longitud_destino) };
+          allNodes.push(originLatLng, destLatLng);
+        } else {
+          return;
+        }
       }
+
+      const request = {
+        origin: originLatLng,
+        destination: destLatLng,
+        waypoints: waypoints,
+        optimizeWaypoints: false, // ¡Crucial! No dejar que Google desordene la decisión de las Hormigas
+        travelMode: g.TravelMode.DRIVING
+      };
+
+      this.directionsService.route(request, (response: any, status: any) => {
+        this.ngZone.run(() => {
+          if (status === 'OK') {
+            this.directionsRenderer.setDirections(response);
+            
+            // Dibujar marcadores personalizados
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            allNodes.forEach((node, index) => {
+              let labelText = "";
+              let bgColor = "#ea4335"; // Red
+              if (index === 0) {
+                labelText = "Inicio";
+                bgColor = "#10b981"; // Green
+              } else if (index === allNodes.length - 1) {
+                labelText = "Final";
+                bgColor = "#000000"; // Black
+              } else {
+                labelText = alphabet[(index - 1) % alphabet.length];
+              }
+              
+              new g.Marker({
+                position: node,
+                map: mapaReal,
+                label: { text: labelText, color: 'white', fontWeight: 'bold' },
+                icon: {
+                  path: g.SymbolPath.CIRCLE,
+                  fillColor: bgColor,
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: 'white',
+                  scale: index === 0 || index === allNodes.length - 1 ? 14 : 10
+                }
+              });
+            });
+
+          } else {
+            console.warn('No se pudo trazar la ruta de Google Maps', status);
+            Swal.fire('Atención', 'Google Maps no encontró ruta válida por calles para estos puntos.', 'warning');
+          }
+        });
+      });
     }
+  }
+
+  animarSimulacionIA(callback: () => void) {
+    const mapaReal = this.mapaComponente?.googleMap;
+    if (!mapaReal || !this.rutaOptimizada || typeof window === 'undefined' || !(window as any).google) { 
+      callback(); 
+      return; 
+    }
+    
+    const g = (window as any).google.maps;
+    const nodes = this.rutaOptimizada.map((n: any) => ({ lat: Number(n.lat), lng: Number(n.lng) }));
+    if (nodes.length < 2) { callback(); return; }
+
+    const polylines: any[] = [];
+    let iterations = 0;
+    const maxIterations = 15; // 1.5 segundos de simulación
+    
+    // Enfocar el mapa al centro de los nodos
+    const bounds = new g.LatLngBounds();
+    nodes.forEach((n: any) => bounds.extend(n));
+    mapaReal.fitBounds(bounds);
+    
+    const drawInterval = setInterval(() => {
+      polylines.forEach(p => p.setMap(null));
+      polylines.length = 0;
+
+      // Crear permutación aleatoria "buscando ruta"
+      const shuffled = [...nodes].sort(() => 0.5 - Math.random());
+      
+      const poly = new g.Polyline({
+        path: shuffled,
+        geodesic: true,
+        strokeColor: '#38bdf8', // Azul celeste
+        strokeOpacity: 0.8,
+        strokeWeight: 4,
+        map: mapaReal
+      });
+      polylines.push(poly);
+
+      iterations++;
+      if (iterations >= maxIterations) {
+        clearInterval(drawInterval);
+        polylines.forEach(p => p.setMap(null));
+        callback();
+      }
+    }, 100);
+  }
+
+  optimizarRutaHormigas() {
+    if (!this.viajeActivo) return;
+
+    Swal.fire({
+      title: 'Buscando GPS...',
+      text: 'Obteniendo tu ubicación actual para usarla como punto de partida.',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          this.llamarEndpointOptimizacion(pos.coords.latitude, pos.coords.longitude);
+        },
+        (err) => {
+          console.warn('GPS no disponible, se usará el primer recojo como punto de partida.');
+          this.llamarEndpointOptimizacion();
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      this.llamarEndpointOptimizacion();
+    }
+  }
+
+  private llamarEndpointOptimizacion(lat?: number, lng?: number) {
+    Swal.fire({
+      title: 'IA Calculando...',
+      text: 'Compitiendo: Colonia de Hormigas vs Algoritmo Genético (VRPPD).',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.viajeService.optimizarRuta(this.viajeActivo.codigo_viaje, lat, lng).subscribe({
+      next: (res: any) => {
+        const aco = res.aco;
+        const ga = res.ga;
+        
+        // Formateo de la tabla comparativa
+        const tablaHtml = `
+          <div style="text-align: left; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px;">
+            <p style="margin: 5px 0;">🐜 <strong>Hormigas (ACO):</strong> ${aco.distancia_km} km en ${aco.tiempo_ms} ms</p>
+            <p style="margin: 5px 0;">🧬 <strong>Genéticos (GA):</strong> ${ga.distancia_km} km en ${ga.tiempo_ms} ms</p>
+          </div>
+          <p style="font-size: 0.9rem;">Elige qué ruta trazar en el mapa:</p>
+        `;
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Análisis Completado!',
+          html: tablaHtml,
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: '🐜 Usar Hormigas',
+          denyButtonText: '🧬 Usar Genético',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#4f46e5',
+          denyButtonColor: '#0ea5e9'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.rutaOptimizada = aco.ruta_optimizada;
+            this.animarSimulacionIA(() => {
+              this.dibujarRutaGoogleMaps();
+              Swal.fire({ title: 'Ruta Actualizada', text: 'Google Maps ha trazado la ruta ganadora de las Hormigas.', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+            });
+          } else if (result.isDenied) {
+            this.rutaOptimizada = ga.ruta_optimizada;
+            this.animarSimulacionIA(() => {
+              this.dibujarRutaGoogleMaps();
+              Swal.fire({ title: 'Ruta Actualizada', text: 'Google Maps ha trazado la ruta del Algoritmo Genético.', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+            });
+          }
+        });
+      },
+      error: (err: any) => {
+        console.error('Error optimizando:', err);
+        Swal.fire('Error', 'No se pudo optimizar la ruta. Inténtalo más tarde.', 'error');
+      }
+    });
   }
 
   cambiarEstado(nuevoEstado: string) {

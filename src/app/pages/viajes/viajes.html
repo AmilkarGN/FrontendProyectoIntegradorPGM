@@ -240,8 +240,11 @@
 
         <div class="col-mapa">
           <div id="mapa-detalle"></div>
-          <div class="nota-info">
-             <small><strong>Nota:</strong> Ruta optimizada calculada en base al origen y destino de la carga.</small>
+          <div class="nota-info" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: #f8fafc; padding: 10px; border-radius: 8px;">
+             <small style="color: #64748b; line-height: 1.4;"><strong>Nota:</strong> Ruta optimizada por IA.<br>Haz clic en Analizar IA para calcular la mejor ruta.</small>
+             <button class="btn-primary" (click)="optimizarRutaHormigasAdmin()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; color: white;">
+              <span class="material-symbols-rounded" style="font-size: 1.2rem;">auto_fix_high</span> Analizar IA
+             </button>
           </div>
         </div>
       </div>
