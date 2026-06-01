@@ -11,7 +11,8 @@
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
   <app-query-builder 
     [columnas]="columnasFiltro" 
-    (filtrosCambiados)="aplicarFiltros($event)">
+    (filtrosCambiados)="aplicarFiltros($event)"
+    (togglePapelera)="alternarPapelera($event)">
   </app-query-builder>
 
   <!-- Contador de resultados -->
@@ -40,9 +41,14 @@
           </span>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-view" (click)="verRuta(r)">👁️ Ver Mapa</button>
-          <button class="btn-action btn-edit" (click)="editarRuta(r)">✏️ Editar</button>
-          <button class="btn-action btn-delete" (click)="eliminar(r.id)">🗑️ Eliminar</button>
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-view" (click)="verRuta(r)">👁️ Ver Mapa</button>
+            <button class="btn-action btn-edit" (click)="editarRuta(r)">✏️ Editar</button>
+            <button class="btn-action btn-delete" (click)="eliminar(r.id)">🗑️ Eliminar</button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" (click)="restaurarRuta(r.id!)" title="Restaurar" style="color: #10b981; background: #d1fae5;">🔄 Restaurar</button>
+          </ng-container>
         </td>
       </tr>
     </tbody>

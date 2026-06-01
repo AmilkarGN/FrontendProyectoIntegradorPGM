@@ -37,6 +37,7 @@ export class ConductoresComponent implements OnInit {
   filtroDisponibilidad: string = '';
   alertaDestacada: string | null = null;
   mostrarGuiaEstados: boolean = false;
+  viendoPapelera: boolean = false;
 
   constructor(
     private conductorService: ConductorService,
@@ -75,7 +76,7 @@ export class ConductoresComponent implements OnInit {
   }
 
   cargarConductores(): void {
-    this.conductorService.obtenerConductores().subscribe({
+    this.conductorService.obtenerConductores(this.viendoPapelera).subscribe({
       next: (dataConductores) => { 
         this.conductores = dataConductores; 
         this.cargarUsuariosFiltrados(); 
@@ -85,6 +86,33 @@ export class ConductoresComponent implements OnInit {
         console.error('Error al cargar conductores:', err); 
         Swal.fire('Error de Carga', 'No se pudieron cargar los datos de los conductores.', 'error');
         this.cargando = false; 
+      }
+    });
+  }
+
+  alternarPapelera(estado: boolean) {
+    this.viendoPapelera = estado;
+    this.cargarConductores();
+  }
+
+  restaurarConductor(id: number): void {
+    Swal.fire({
+      title: '¿Restaurar Conductor?',
+      text: `¿Deseas restaurar este conductor de la papelera?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.conductorService.restaurarConductor(id).subscribe({
+          next: () => {
+            this.cargarConductores();
+            Swal.fire('Restaurado', 'El conductor fue devuelto al catálogo.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar.', 'error')
+        });
       }
     });
   }

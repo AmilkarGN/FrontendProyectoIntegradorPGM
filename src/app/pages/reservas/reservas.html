@@ -13,7 +13,8 @@
   <!-- FILTROS AVANZADOS (QUERY BUILDER) -->
   <app-query-builder 
     [columnas]="columnasFiltro" 
-    (filtrosCambiados)="aplicarFiltros($event)">
+    (filtrosCambiados)="aplicarFiltros($event)"
+    (togglePapelera)="alternarPapelera($event)">
   </app-query-builder>
 
   <!-- Contador de resultados -->
@@ -66,12 +67,15 @@
           </span>
         </td>
         <td class="actions-column">
-
-          <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️ Ver</button>
-          <button class="btn-action btn-edit" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="editarReserva(r)" title="Editar">✏️ Editar</button>
-          <button class="btn-action btn-delete" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="eliminarReserva(r)" title="Eliminar">🗑️ Eliminar</button>
-          <button class="btn-action" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="generarFactura(r)" title="Generar Factura Comercial">🧾 Factura</button>
-          
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-view" (click)="verReserva(r)" title="Ver Detalles">👁️ Ver</button>
+            <button class="btn-action btn-edit" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="editarReserva(r)" title="Editar">✏️ Editar</button>
+            <button class="btn-action btn-delete" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="eliminarReserva(r)" title="Eliminar">🗑️ Eliminar</button>
+            <button class="btn-action" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="generarFactura(r)" title="Generar Factura Comercial">🧾 Factura</button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" *ngIf="authService.tienePermiso('gestionar_todas_reservas')" (click)="restaurarReserva(r.codigo_reserva!)" title="Restaurar" style="color: #10b981; background: #d1fae5;">🔄 Restaurar</button>
+          </ng-container>
         </td>
       </tr>
     </tbody>

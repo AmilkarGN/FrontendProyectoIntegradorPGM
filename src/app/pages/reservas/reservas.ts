@@ -32,6 +32,7 @@ export class ReservasComponent implements OnInit {
   configuracionGlobal: ConfiguracionSistema | null = null;
   mostrarModal = false;
   reservaActual: any = {};
+  viendoPapelera: boolean = false;
   
   // Lógica de Lotes (Cargas Múltiples)
   cargasEnLote: any[] = [];
@@ -101,7 +102,7 @@ export class ReservasComponent implements OnInit {
 
   cargarDatosYRevisarURL(): void {
     // 1. Primero traemos las Reservas
-    this.reservaService.obtenerReservas().subscribe(dataReservas => {
+    this.reservaService.obtenerReservas(this.viendoPapelera).subscribe(dataReservas => {
       this.reservas = dataReservas;
       
       // 2. Traemos los clientes
@@ -124,7 +125,7 @@ export class ReservasComponent implements OnInit {
   }
 
   cargarDatos(): void {
-    this.reservaService.obtenerReservas().subscribe(data => this.reservas = data);
+    this.reservaService.obtenerReservas(this.viendoPapelera).subscribe(data => this.reservas = data);
     this.clienteService.obtenerClientes().subscribe(data => this.clientes = data);
     this.configuracionService.obtenerConfiguracion().subscribe(data => {
       if (data && data.length > 0) {
@@ -132,6 +133,33 @@ export class ReservasComponent implements OnInit {
       }
     });
     this.viajeService.obtenerViajes().subscribe(data => this.viajesProgramados = data);
+  }
+
+  alternarPapelera(estado: boolean): void {
+    this.viendoPapelera = estado;
+    this.cargarDatosYRevisarURL();
+  }
+
+  restaurarReserva(codigo: string): void {
+    Swal.fire({
+      title: '¿Restaurar Reserva?',
+      text: `¿Deseas restaurar esta reserva de la papelera?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.reservaService.restaurarReserva(codigo).subscribe({
+          next: () => {
+            this.cargarDatosYRevisarURL();
+            Swal.fire('Restaurado', 'La reserva fue devuelta al catálogo.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar la reserva.', 'error')
+        });
+      }
+    });
   }
 
   // --- CONFIGURACIÓN GLOBAL DE TARIFA ---

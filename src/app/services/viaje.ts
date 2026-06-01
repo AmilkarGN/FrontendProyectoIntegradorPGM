@@ -25,7 +25,13 @@ export class ViajeService {
   }
 
   // --- VIAJES ---
-  obtenerViajes(): Observable<any[]> { return this.http.get<any[]>(`${this.apiUrl}/viajes/`); }
+  obtenerViajes(eliminados: boolean = false): Observable<any[]> { 
+    const url = eliminados ? `${this.apiUrl}/viajes/?eliminados=true` : `${this.apiUrl}/viajes/`;
+    return this.http.get<any[]>(url); 
+  }
+  restaurarViaje(codigo: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/viajes/${codigo}/restaurar/`, {});
+  }
   obtenerMisViajes(): Observable<any> { return this.http.get<any>(`${this.apiUrl}/viajes/mis-viajes/`); }
   crearViaje(datos: any): Observable<any> { return this.http.post(`${this.apiUrl}/viajes/`, datos); }
   actualizarEstadoViaje(codigo: string, datos: any): Observable<any> { return this.http.patch(`${this.apiUrl}/viajes/${codigo}/`, datos); }

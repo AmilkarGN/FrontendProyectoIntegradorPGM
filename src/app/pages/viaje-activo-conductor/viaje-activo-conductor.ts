@@ -294,18 +294,29 @@ export class ViajeActivoConductorComponent implements OnInit {
           confirmButtonColor: '#4f46e5',
           denyButtonColor: '#0ea5e9'
         }).then((result) => {
-          if (result.isConfirmed) {
-            this.rutaOptimizada = aco.ruta_optimizada;
-            this.animarSimulacionIA(() => {
-              this.dibujarRutaGoogleMaps();
-              Swal.fire({ title: 'Ruta Actualizada', text: 'Google Maps ha trazado la ruta ganadora de las Hormigas.', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
-            });
-          } else if (result.isDenied) {
-            this.rutaOptimizada = ga.ruta_optimizada;
-            this.animarSimulacionIA(() => {
-              this.dibujarRutaGoogleMaps();
-              Swal.fire({ title: 'Ruta Actualizada', text: 'Google Maps ha trazado la ruta del Algoritmo Genético.', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
-            });
+          if (result.isConfirmed || result.isDenied) {
+            const dataSeleccionada = result.isConfirmed ? aco : ga;
+            this.rutaOptimizada = dataSeleccionada.ruta_optimizada;
+            
+            // 1. Calcular el tiempo total con holgura
+            // Asumimos 60 km/h de promedio de conducción
+            const horasConduccion = dataSeleccionada.distancia_km / 60;
+            // 2 horas de holgura por cada punto de parada (reserva)
+            const horasBufferCarga = (this.viajeActivo.reservas_detalle ? this.viajeActivo.reservas_detalle.length : 1) * 2;
+            const horasTotal = horasConduccion + horasBufferCarga;
+            
+            const fechaSalida = new Date(this.viajeActivo.fecha_salida || new Date());
+            const fechaLlegada = new Date(fechaSalida.getTime() + (horasTotal * 60 * 60 * 1000));
+            const nuevaLlegadaISO = fechaLlegada.toISOString().slice(0, 16);
+
+            // 2. Guardar temporalmente en el frontend
+            this.payloadRutaPendiente = {
+              fecha_llegada_estimada: nuevaLlegadaISO,
+              ruta_optimizada_json: dataSeleccionada.ruta_optimizada,
+              distancia_optimizada_km: dataSeleccionada.distancia_km
+            };
+
+            this.animarSimulacionIA(() => { this.dibujarRutaGoogleMaps(); });
           }
         });
       },
@@ -313,6 +324,24 @@ export class ViajeActivoConductorComponent implements OnInit {
         console.error('Error optimizando:', err);
         Swal.fire('Error', 'No se pudo optimizar la ruta. Inténtalo más tarde.', 'error');
       }
+    });
+  }
+
+  payloadRutaPendiente: any = null;
+
+  guardarRutaOficialConductor() {
+    if (!this.payloadRutaPendiente) {
+      Swal.fire('Atención', 'Primero debes trazar la ruta con IA.', 'warning');
+      return;
+    }
+    
+    this.viajeService.actualizarViaje(this.viajeActivo.codigo_viaje, this.payloadRutaPendiente).subscribe({
+      next: () => {
+        this.viajeActivo.fecha_llegada_estimada = this.payloadRutaPendiente.fecha_llegada_estimada; 
+        Swal.fire('Ruta Confirmada', 'Tu ruta oficial se ha registrado en el sistema. ¡Buen viaje!', 'success');
+        this.payloadRutaPendiente = null;
+      },
+      error: () => Swal.fire('Error', 'No se pudo guardar la ruta en la base de datos.', 'error')
     });
   }
 

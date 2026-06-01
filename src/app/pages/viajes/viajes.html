@@ -12,7 +12,8 @@
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
   <app-query-builder 
     [columnas]="columnasFiltro" 
-    (filtrosCambiados)="aplicarFiltros($event)">
+    (filtrosCambiados)="aplicarFiltros($event)"
+    (togglePapelera)="alternarPapelera($event)">
   </app-query-builder>
 
   <!-- Contador de resultados -->
@@ -68,18 +69,23 @@
           </td>
           <td>
             <div class="acciones-flex">
-              <button class="btn-icon btn-gps" 
-                      *ngIf="authService.tienePermiso('gestionar_todos_viajes')"
-                      [ngClass]="{'parpadeo-activo': viajeEnRastreo === v.codigo_viaje}" 
-                      (click)="toggleRastreo(v)" 
-                      title="Transmitir Ubicación en Vivo">
-                {{ viajeEnRastreo === v.codigo_viaje ? '📡' : '🛰️' }}
-              </button>
-              
-              <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️ Ver</button>
-              <button class="btn-icon btn-dinero" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Viáticos</button>
-              <button class="btn-icon btn-editar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
-              <button class="btn-icon btn-eliminar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
+              <ng-container *ngIf="!viendoPapelera">
+                <button class="btn-icon btn-gps" 
+                        *ngIf="authService.tienePermiso('gestionar_todos_viajes')"
+                        [ngClass]="{'parpadeo-activo': viajeEnRastreo === v.codigo_viaje}" 
+                        (click)="toggleRastreo(v)" 
+                        title="Transmitir Ubicación en Vivo">
+                  {{ viajeEnRastreo === v.codigo_viaje ? '📡' : '🛰️' }}
+                </button>
+                
+                <button class="btn-icon btn-ver" (click)="abrirDetalles(v)" title="Ver Detalles de Ruta">👁️ Ver</button>
+                <button class="btn-icon btn-dinero" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirViaticos(v)" title="Gestionar Viáticos">💵 Viáticos</button>
+                <button class="btn-icon btn-editar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="abrirModalEditar(v)" title="Editar">✏️ Editar</button>
+                <button class="btn-icon btn-eliminar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="eliminarViaje(v)" title="Eliminar">🗑️ Eliminar</button>
+              </ng-container>
+              <ng-container *ngIf="viendoPapelera">
+                <button class="btn-icon btn-editar" *ngIf="authService.tienePermiso('gestionar_todos_viajes')" (click)="restaurarViaje(v.codigo_viaje)" title="Restaurar" style="color: #10b981; background: #d1fae5;">🔄 Restaurar</button>
+              </ng-container>
             </div>
           </td>
         </tr>

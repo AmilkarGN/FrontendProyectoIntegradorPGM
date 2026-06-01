@@ -33,6 +33,7 @@ export class ViajesComponent implements OnInit {
   mostrarModalDetalles: boolean = false;
   mostrarModalViaticos: boolean = false;
   mostrarGuiaEstados: boolean = false;
+  viendoPapelera: boolean = false;
 
   viajeSeleccionado: any = null;
   rutaOptimizada: any[] | null = null;
@@ -126,9 +127,36 @@ export class ViajesComponent implements OnInit {
     }
 
   cargarViajes() {
-    this.viajeService.obtenerViajes().subscribe(res => {
+    this.viajeService.obtenerViajes(this.viendoPapelera).subscribe(res => {
       this.viajes = res;
       this.filtrarEquiposDisponibles(); // Volvemos a filtrar por si un viaje terminó
+    });
+  }
+
+  alternarPapelera(estado: boolean) {
+    this.viendoPapelera = estado;
+    this.cargarViajes();
+  }
+
+  restaurarViaje(codigo: string): void {
+    Swal.fire({
+      title: '¿Restaurar Viaje?',
+      text: `¿Deseas restaurar este viaje de la papelera?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.viajeService.restaurarViaje(codigo).subscribe({
+          next: () => {
+            this.cargarViajes();
+            Swal.fire('Restaurado', 'El viaje fue devuelto a los registros activos.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar.', 'error')
+        });
+      }
     });
   }
 
@@ -665,11 +693,28 @@ alSeleccionarVehiculo() {
           confirmButtonText: '🐜 Usar Hormigas', denyButtonText: '🧬 Usar Genético', cancelButtonText: 'Cancelar',
           confirmButtonColor: '#4f46e5', denyButtonColor: '#0ea5e9'
         }).then((result) => {
-          if (result.isConfirmed) {
-            this.rutaOptimizada = aco.ruta_optimizada;
-            this.animarSimulacionIAAdmin(() => { this.dibujarRutaDetalle(); });
-          } else if (result.isDenied) {
-            this.rutaOptimizada = ga.ruta_optimizada;
+          if (result.isConfirmed || result.isDenied) {
+            const dataSeleccionada = result.isConfirmed ? aco : ga;
+            this.rutaOptimizada = dataSeleccionada.ruta_optimizada;
+            
+            // 1. Calcular el tiempo total con holgura
+            // Asumimos 60 km/h de promedio de conducción
+            const horasConduccion = dataSeleccionada.distancia_km / 60;
+            // 2 horas de holgura por cada punto de parada (reserva)
+            const horasBufferCarga = (this.viajeSeleccionado.reservas_detalle ? this.viajeSeleccionado.reservas_detalle.length : 1) * 2;
+            const horasTotal = horasConduccion + horasBufferCarga;
+            
+            const fechaSalida = new Date(this.viajeSeleccionado.fecha_salida);
+            const fechaLlegada = new Date(fechaSalida.getTime() + (horasTotal * 60 * 60 * 1000));
+            const nuevaLlegadaISO = fechaLlegada.toISOString().slice(0, 16);
+
+            // 2. Guardar temporalmente en el frontend
+            this.payloadRutaPendiente = {
+              fecha_llegada_estimada: nuevaLlegadaISO,
+              ruta_optimizada_json: dataSeleccionada.ruta_optimizada,
+              distancia_optimizada_km: dataSeleccionada.distancia_km
+            };
+
             this.animarSimulacionIAAdmin(() => { this.dibujarRutaDetalle(); });
           }
         });
@@ -678,6 +723,24 @@ alSeleccionarVehiculo() {
         console.error(err);
         Swal.fire('Error IA', 'No se pudo procesar la optimización neuronal.', 'error');
       }
+    });
+  }
+
+  payloadRutaPendiente: any = null;
+
+  guardarRutaOficialAdmin() {
+    if (!this.payloadRutaPendiente) {
+      Swal.fire('Atención', 'Primero debes Analizar IA y elegir una ruta.', 'warning');
+      return;
+    }
+    
+    this.viajeService.actualizarViaje(this.viajeSeleccionado.codigo_viaje, this.payloadRutaPendiente).subscribe({
+      next: () => {
+        this.viajeSeleccionado.fecha_llegada_estimada = this.payloadRutaPendiente.fecha_llegada_estimada; 
+        Swal.fire('Ruta Guardada', 'La ruta oficial y los tiempos estimados se guardaron con éxito en la base de datos.', 'success');
+        this.payloadRutaPendiente = null;
+      },
+      error: () => Swal.fire('Error', 'No se pudo guardar la ruta en la base de datos.', 'error')
     });
   }
 

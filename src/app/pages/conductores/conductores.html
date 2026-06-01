@@ -12,7 +12,8 @@
   <!-- MOTOR DE CONSULTAS DINÁMICAS (QUERY BUILDER) -->
   <app-query-builder 
     [columnas]="columnasFiltro" 
-    (filtrosCambiados)="aplicarFiltros($event)">
+    (filtrosCambiados)="aplicarFiltros($event)"
+    (togglePapelera)="alternarPapelera($event)">
   </app-query-builder>
 
   <!-- Contador de resultados -->
@@ -60,7 +61,8 @@
             }"
             [(ngModel)]="conductor.estado" 
             (change)="cambiarEstadoRapido(conductor, $event)"
-            title="Cambiar estado del conductor">
+            title="Cambiar estado del conductor"
+            [attr.disabled]="viendoPapelera ? true : null">
             <option *ngFor="let e of estados" [value]="e">{{ e }}</option>
           </select>
         </td>
@@ -70,9 +72,14 @@
           </span>
         </td>
         <td class="actions-column">
-          <button class="btn-action btn-view" (click)="verConductor(conductor)" title="Ver Detalles">👁️ Ver</button>
-          <button class="btn-action btn-edit" (click)="editarConductor(conductor)" title="Editar">✏️ Editar</button>
-          <button class="btn-action btn-delete" (click)="eliminarConductor(conductor.id)" title="Eliminar">🗑️ Eliminar</button>
+          <ng-container *ngIf="!viendoPapelera">
+            <button class="btn-action btn-view" (click)="verConductor(conductor)" title="Ver Detalles">👁️ Ver</button>
+            <button class="btn-action btn-edit" (click)="editarConductor(conductor)" title="Editar">✏️ Editar</button>
+            <button class="btn-action btn-delete" (click)="eliminarConductor(conductor.id)" title="Eliminar">🗑️ Eliminar</button>
+          </ng-container>
+          <ng-container *ngIf="viendoPapelera">
+            <button class="btn-action btn-edit" (click)="restaurarConductor(conductor.id!)" title="Restaurar" style="color: #10b981; background: #d1fae5;">🔄 Restaurar</button>
+          </ng-container>
         </td>
       </tr>
     </tbody>

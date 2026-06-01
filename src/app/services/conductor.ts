@@ -47,7 +47,11 @@ export class ConductorService {
   constructor(private http: HttpClient) { }
 
   // --- CRUD CONDUCTORES ---
-  obtenerConductores(): Observable<Conductor[]> { return this.http.get<Conductor[]>(this.apiUrl); }
+  obtenerConductores(eliminados: boolean = false): Observable<Conductor[]> { 
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Conductor[]>(url); 
+  }
+  restaurarConductor(id: number): Observable<any> { return this.http.post(`${this.apiUrl}${id}/restaurar/`, {}); }
   crearConductor(conductor: Conductor): Observable<Conductor> { return this.http.post<Conductor>(this.apiUrl, conductor); }
   actualizarConductor(id: number, conductor: Conductor): Observable<Conductor> { return this.http.put<Conductor>(`${this.apiUrl}${id}/`, conductor); }
   patchConductor(id: number, datos: any): Observable<Conductor> { return this.http.patch<Conductor>(`${this.apiUrl}${id}/`, datos); }

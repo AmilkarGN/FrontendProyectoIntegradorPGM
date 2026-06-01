@@ -27,6 +27,7 @@ export class RutasComponent implements OnInit {
   rutaVer: any = {};
   viajesRuta: any[] = [];
   cargandoViajes = false;
+  viendoPapelera = false;
 
 
   constructor(
@@ -44,8 +45,35 @@ export class RutasComponent implements OnInit {
   }
 
   cargarDatos(): void {
-    this.rutaService.obtenerRutas().subscribe(data => this.rutas = data);
+    this.rutaService.obtenerRutas(this.viendoPapelera).subscribe(data => this.rutas = data);
     this.ciudadService.obtenerCiudades().subscribe(data => this.ciudades = data);
+  }
+
+  alternarPapelera(estado: boolean): void {
+    this.viendoPapelera = estado;
+    this.cargarDatos();
+  }
+
+  restaurarRuta(id: number): void {
+    Swal.fire({
+      title: '¿Restaurar Ruta?',
+      text: `¿Deseas restaurar esta ruta de la papelera?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, restaurar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.rutaService.restaurarRuta(id).subscribe({
+          next: () => {
+            this.cargarDatos();
+            Swal.fire('Restaurado', 'La ruta fue devuelta al catálogo.', 'success');
+          },
+          error: () => Swal.fire('Error', 'No se pudo restaurar la ruta.', 'error')
+        });
+      }
+    });
   }
 
   // --- QUERY BUILDER CONFIG ---

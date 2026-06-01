@@ -20,8 +20,13 @@ export class RutaService {
 
   constructor(private http: HttpClient) { }
 
-  obtenerRutas(): Observable<Ruta[]> {
-    return this.http.get<Ruta[]>(this.apiUrl);
+  obtenerRutas(eliminados: boolean = false): Observable<Ruta[]> {
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Ruta[]>(url);
+  }
+
+  restaurarRuta(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}${id}/restaurar/`, {});
   }
 
   crearRuta(ruta: Ruta): Observable<Ruta> {

@@ -48,8 +48,13 @@ export class ReservaService {
 
   constructor(private http: HttpClient) { }
 
-  obtenerReservas(): Observable<Reserva[]> {
-    return this.http.get<Reserva[]>(this.apiUrl);
+  obtenerReservas(eliminados: boolean = false): Observable<Reserva[]> {
+    const url = eliminados ? `${this.apiUrl}?eliminados=true` : this.apiUrl;
+    return this.http.get<Reserva[]>(url);
+  }
+
+  restaurarReserva(codigo: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}${codigo}/restaurar/`, {});
   }
 
   crearReserva(reserva: Reserva): Observable<Reserva> {
