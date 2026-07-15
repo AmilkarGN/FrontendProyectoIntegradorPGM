@@ -72,6 +72,10 @@
   box-sizing: border-box; /* CRÍTICO: Respeta siempre el padding */
 }
 
+.modal-lg {
+  max-width: 1000px;
+}
+
 .crud-modal h3 { 
   color: #1e293b; margin-top: 0; margin-bottom: 25px; font-weight: 700;
 }

@@ -35,6 +35,9 @@ export class ViajesComponent implements OnInit {
   mostrarGuiaEstados: boolean = false;
   viendoPapelera: boolean = false;
 
+  horasEstimadasActuales: number = 0;
+  generandoFecha: boolean = false;
+
   viajeSeleccionado: any = null;
   rutaOptimizada: any[] | null = null;
   mapaAdmin: any = null;
@@ -228,7 +231,7 @@ export class ViajesComponent implements OnInit {
   filtrarEquiposDisponibles() {
     if (!this.asignacionesActivas.length || !this.viajes || !this.vehiculos || !this.conductores) return;
 
-    const estadosOcupados = ['Programado', 'En Espera', 'En Curso'];
+    const estadosOcupados = ['En Espera', 'En Curso'];
 
     this.asignacionesDisponibles = this.asignacionesActivas.filter(asig => {
       const estaOcupado = this.viajes.some(v => 
@@ -277,7 +280,15 @@ alSeleccionarVehiculo() {
         
         if (reserva.fecha_tentativa_viaje) {
           this.nuevoViaje.fecha_salida = reserva.fecha_tentativa_viaje + "T08:00"; 
-          this.calcularLlegadaAutomatica(reserva.tiempo_estimado_horas);
+          
+          let horas = reserva.tiempo_estimado_horas ? parseFloat(reserva.tiempo_estimado_horas) : 0;
+          if (!horas && reserva.distancia_real_km) {
+            horas = parseFloat(reserva.distancia_real_km) / 60; // 60 km/h por defecto
+          }
+          if (!horas) horas = 24; // 1 día por defecto
+          
+          this.horasEstimadasActuales = horas;
+          this.calcularLlegadaAutomatica();
         }
       }
     } else {
@@ -297,11 +308,15 @@ alSeleccionarVehiculo() {
     }
   }
 
-  calcularLlegadaAutomatica(horasViaje: any) {
-    if (!this.nuevoViaje.fecha_salida || !horasViaje) return;
-    const fechaSalida = new Date(this.nuevoViaje.fecha_salida);
-    const fechaLlegada = new Date(fechaSalida.getTime() + (parseFloat(horasViaje) * 60 * 60 * 1000));
-    this.nuevoViaje.fecha_llegada_estimada = fechaLlegada.toISOString().slice(0, 16);
+  calcularLlegadaAutomatica() {
+    if (!this.nuevoViaje.fecha_salida || !this.horasEstimadasActuales) return;
+    this.generandoFecha = true;
+    setTimeout(() => {
+      const fechaSalida = new Date(this.nuevoViaje.fecha_salida);
+      const fechaLlegada = new Date(fechaSalida.getTime() + (this.horasEstimadasActuales * 60 * 60 * 1000));
+      this.nuevoViaje.fecha_llegada_estimada = fechaLlegada.toISOString().slice(0, 16);
+      this.generandoFecha = false;
+    }, 800);
   }
 
   // --- CRUD VIAJES ---

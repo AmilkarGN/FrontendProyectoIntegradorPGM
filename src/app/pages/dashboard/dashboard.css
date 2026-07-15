@@ -67,7 +67,71 @@
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
-/* Títulos de Módulos */
+/* --- MENÚ DESPLEGABLE (ACORDEÓN) --- */
+.nav-dropdown {
+  margin-bottom: 5px;
+}
+
+.nav-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.nav-dropdown-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.nav-dropdown-header.active {
+  color: #ffffff;
+}
+
+.nav-dropdown-header .header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-dropdown-header .icon {
+  font-size: 1.4rem;
+}
+.nav-dropdown-header.active .icon {
+  color: #FF6600;
+}
+
+.nav-dropdown-header .nav-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.nav-dropdown-header .chevron {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.nav-dropdown-header.active .chevron {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-items {
+  display: none;
+  flex-direction: column;
+  padding-left: 20px;
+  margin-top: 5px;
+  animation: slideDown 0.2s ease-out forwards;
+}
+
+.nav-dropdown-items.open {
+  display: flex;
+}
+
+/* Títulos de Módulos (Legacy) */
 .nav-section-title {
   color: #64748b;
   font-size: 0.7rem;

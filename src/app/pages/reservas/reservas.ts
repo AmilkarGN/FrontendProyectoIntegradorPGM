@@ -20,7 +20,7 @@ import { QueryBuilderComponent, ColumnaFiltrable, ReglaFiltro, evaluarFiltrosDin
   standalone: true,
   imports: [CommonModule, FormsModule, QueryBuilderComponent],
   templateUrl: './reservas.html',
-  styleUrls: ['../../app.css']
+  styleUrls: ['./reservas.css']
 })
 export class ReservasComponent implements OnInit {
   @ViewChild('mapContainer') mapElement!: ElementRef;
@@ -33,6 +33,7 @@ export class ReservasComponent implements OnInit {
   mostrarModal = false;
   reservaActual: any = {};
   viendoPapelera: boolean = false;
+  esCliente: boolean = false;
   
   // Lógica de Lotes (Cargas Múltiples)
   cargasEnLote: any[] = [];
@@ -76,6 +77,7 @@ export class ReservasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.esCliente = this.authService.tieneRol('Cliente');
     this.route.queryParams.subscribe(params => {
       if (params['alerta']) this.alertaDestacada = String(params['alerta']);
     });
@@ -642,6 +644,26 @@ export class ReservasComponent implements OnInit {
   }
 
   // --- GUARDAR O ACTUALIZAR RESERVA ---
+  validarSubmit(form: any): void {
+    if (this.cargasEnLote.length === 0 && form.invalid) {
+      form.control.markAllAsTouched();
+      Swal.fire('Atención', 'Por favor, completa todos los campos obligatorios de la reserva.', 'warning');
+      return;
+    }
+    
+    if (!this.reservaActual.fecha_tentativa_viaje) {
+      Swal.fire('Atención', 'La fecha solicitada es obligatoria.', 'warning');
+      return;
+    }
+    
+    if (!this.esCliente && (!this.reservaActual.cliente || this.reservaActual.cliente === 'null')) {
+      Swal.fire('Atención', 'Debe seleccionar un cliente.', 'warning');
+      return;
+    }
+    
+    this.guardar();
+  }
+
   guardar(): void {
     // Si estamos editando una sola reserva (no un lote)
     if (this.reservaActual.codigo_reserva) {

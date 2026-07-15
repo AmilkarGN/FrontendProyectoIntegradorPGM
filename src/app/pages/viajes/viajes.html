@@ -153,13 +153,14 @@
         <div class="grid-fechas">
           <div class="form-group">
             <label>Fecha de Salida</label>
-            <input type="datetime-local" name="fsalida" [(ngModel)]="nuevoViaje.fecha_salida" (change)="calcularLlegadaAutomatica(0)" class="input-claro input-calendario" required>
+            <input type="datetime-local" name="fsalida" [(ngModel)]="nuevoViaje.fecha_salida" (change)="calcularLlegadaAutomatica()" class="input-claro input-calendario" required>
                       <small *ngIf="viajeForm.controls['fsalida']?.invalid && viajeForm.controls['fsalida']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
           <div class="form-group">
-            <label>Llegada Estimada</label>
-            <input type="datetime-local" name="fllegada" [(ngModel)]="nuevoViaje.fecha_llegada_estimada" class="input-claro input-calendario" [readonly]="!esEdicion" [ngClass]="{'input-bloqueado': !esEdicion}" required>
-            <small *ngIf="!esEdicion" class="alerta-estimacion">⚠️ Estimación automática del sistema.</small>
+            <label>Fecha de Llegada Estimada</label>
+            <input type="datetime-local" name="fllegada" [(ngModel)]="nuevoViaje.fecha_llegada_estimada" class="input-claro input-calendario" required>
+            <small *ngIf="generandoFecha" class="alerta-estimacion" style="color: #4f46e5; font-weight: 600;">⏳ Generando fecha de llegada estimada...</small>
+            <small *ngIf="!esEdicion && !generandoFecha" class="alerta-estimacion" style="color: #64748b;">Puedes ajustar la fecha manualmente si lo requieres.</small>
                       <small *ngIf="viajeForm.controls['fllegada']?.invalid && viajeForm.controls['fllegada']?.touched" class="text-danger" style="color: #ef4444; font-weight: 600; font-size: 0.8rem; margin-top: 4px; display: block;">❌ Campo obligatorio o inválido.</small>
           </div>
         </div>

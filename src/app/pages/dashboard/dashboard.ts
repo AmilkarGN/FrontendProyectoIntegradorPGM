@@ -27,6 +27,8 @@ export class Dashboard {
   esConductor: boolean = false;
   nombreUsuario: string = 'Usuario';
   rolUsuario: string = 'Rol';
+  
+  menuAbierto: string = 'recepcion'; // Menú abierto por defecto
 
   constructor(private authService: AuthService, private alertasService: AlertasService) {}
 
@@ -53,6 +55,10 @@ export class Dashboard {
 
   cerrarNotificaciones() {
     this.mostrarNotificaciones = false;
+  }
+
+  toggleMenu(menu: string) {
+    this.menuAbierto = this.menuAbierto === menu ? '' : menu;
   }
 
   ignorarAlerta(event: Event, id: string) {

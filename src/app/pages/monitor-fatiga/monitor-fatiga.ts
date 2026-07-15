@@ -152,25 +152,45 @@ export class MonitorFatigaComponent implements OnInit, OnDestroy {
   }
 
   private registrarAlerta(tipo: string): void {
-    // 1. Obtenemos el viaje "En Curso" (Simulamos que este monitor pertenece al conductor activo)
+    // 1. Obtenemos el viaje "En Curso"
     this.viajeService.obtenerDatosMapaVivo().subscribe(viajes => {
       if (viajes && viajes.length > 0) {
-        const viajeActivo = viajes[0]; // Usamos el primer camión que encontremos
+        const viajeActivo = viajes[0];
         
-        const payload = {
-          viaje: viajeActivo.codigo_viaje,
-          nivel_severidad: 'Crítico', // Microsueño o Fatiga = Crítico
-          latitud: viajeActivo.latitud_actual || viajeActivo.latitud_origen, // Tomamos la última ubicación o el origen
-          longitud: viajeActivo.longitud_actual || viajeActivo.longitud_origen
-        };
-
-        this.http.post('http://localhost:8000/api/alertas-fatiga/', payload).subscribe({
-          next: () => console.log('✅ Alerta de fatiga registrada con éxito', payload),
-          error: (err) => console.error('❌ Error registrando alerta', err)
-        });
+        // 2. Intentar obtener la ubicación real GPS del navegador actual (ej. laptop o celular en la cabina)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              // Éxito: Tenemos la ubicación exacta y actual
+              this._enviarPayload(viajeActivo.codigo_viaje, pos.coords.latitude, pos.coords.longitude);
+            },
+            (err) => {
+              // Fallo: Usuario denegó permisos o falló el GPS, usamos la última ubicación conocida del backend
+              console.warn('⚠️ No se pudo obtener GPS del navegador, usando última ubicación conocida.', err);
+              this._enviarPayload(viajeActivo.codigo_viaje, viajeActivo.latitud_actual || viajeActivo.latitud_origen, viajeActivo.longitud_actual || viajeActivo.longitud_origen);
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+          );
+        } else {
+          // Navegador no soporta geolocalización
+          this._enviarPayload(viajeActivo.codigo_viaje, viajeActivo.latitud_actual || viajeActivo.latitud_origen, viajeActivo.longitud_actual || viajeActivo.longitud_origen);
+        }
       } else {
         console.warn('⚠️ Alerta detectada pero no hay ningún Viaje "En Curso" para asignarle la alerta.');
       }
+    });
+  }
+
+  private _enviarPayload(codigoViaje: string, lat: number, lng: number): void {
+    const payload = {
+      viaje: codigoViaje,
+      nivel_severidad: 'Crítico', // Microsueño o Fatiga = Crítico
+      latitud: Number(lat.toFixed(7)),
+      longitud: Number(lng.toFixed(7))
+    };
+    this.http.post('http://localhost:8000/api/alertas-fatiga/', payload).subscribe({
+      next: () => console.log('✅ Alerta de fatiga registrada con éxito en nueva ubicación', payload),
+      error: (err) => console.error('❌ Error registrando alerta', err)
     });
   }
 

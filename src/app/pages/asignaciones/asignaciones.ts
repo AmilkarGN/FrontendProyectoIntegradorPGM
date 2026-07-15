@@ -97,24 +97,31 @@ export class AsignacionesComponent implements OnInit {
   }
 
   getEstadoAsignacion(asignacion: any): string {
-    const enViajeActivo = this.viajes.some(v => 
-      v.asignacion === asignacion.id &&
-      v.estado_nombre !== 'Finalizado' &&
-      v.estado_nombre !== 'Cancelado'
-    );
-    if (enViajeActivo) return 'En Viaje';
-
     const v = this.vehiculos.find(x => x.placa === asignacion.vehiculo);
     const c = this.conductores.find(x => x.id === asignacion.conductor);
 
+    // Si el vehículo está inactivo, esa es la prioridad número 1
     if (v && (v.estado === 'En Taller' || v.estado === 'Averiado en viaje')) {
       return 'Vehículo Inactivo';
     }
+
+    // Si el conductor está inactivo, esa es la prioridad número 2
     const inactivosCond = ['Vacaciones', 'Baja Medica', 'Permiso', 'Descanso'];
     if (c && inactivosCond.includes(c.estado)) {
       return 'Conductor Inactivo';
     }
 
+    // Comprobamos si tiene un viaje activo (solo En Curso o Averiado)
+    const viajeEnCurso = this.viajes.find(viaje => 
+      viaje.asignacion === asignacion.id &&
+      (viaje.estado_nombre === 'En Curso' || viaje.estado_nombre === 'Averiado en viaje')
+    );
+    
+    if (viajeEnCurso) {
+      return 'En Viaje';
+    }
+
+    // Si no está En Viaje, y no está en Taller/Vacaciones, está Disponible
     return 'Disponible';
   }
 

@@ -87,14 +87,14 @@
         <h3>📍 Planificación de Ruta y Reserva</h3>
       </div>
       
-      <div class="grid-detalles-mapa">
+      <div class="reserva-grid">
         <div class="col-datos form-scroll" style="max-height: 60vh; overflow-y: auto; padding-right: 15px;">
           
           <div *ngIf="alertaEdicionPeligrosa" style="margin-bottom: 15px; padding: 12px; background-color: #fee2e2; border-left: 5px solid #ef4444; color: #991b1b; font-size: 0.9rem; font-weight: 500; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             {{ alertaEdicionPeligrosa }}
           </div>
           
-          <form (ngSubmit)="reservaForm.invalid ? reservaForm.control.markAllAsTouched() : guardar()" #reservaForm="ngForm">
+          <form (ngSubmit)="validarSubmit(reservaForm)" #reservaForm="ngForm">
             
             <div class="form-group">
               <label>Cliente Solicitante *</label>
@@ -274,7 +274,7 @@
         <span class="badge badge-success">{{ reservaActual.estado_nombre || 'Registrada' }}</span>
       </div>
       
-      <div class="grid-detalles-mapa">
+      <div class="reserva-grid">
         <div class="col-datos">
           <div class="card-detalle">
             <p class="card-subtitle">CLIENTE</p>
